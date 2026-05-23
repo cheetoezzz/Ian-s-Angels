@@ -1,0 +1,25 @@
+{
+  "name": "Pickleball Queue",
+  "short_name": "PickleQueue",
+  "description": "Fair one-court player rotation for pickleball",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#2e7d32",
+  "orientation": "portrait",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "images/ian.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/ian.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

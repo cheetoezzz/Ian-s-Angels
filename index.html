@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f5132">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Ian's Angels</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="images/ian.png">
+    <link rel="icon" href="images/ian.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <img src="images/ian.png" alt="Logo" class="header-logo header-logo-left">
+            <h1>Ian's Angels</h1>
+            <p class="subtitle">Fair one-court player rotation</p>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="queue">Queue</button>
+            <button class="tab-btn" data-tab="sessions">Sessions</button>
+            <button class="tab-btn" data-tab="data">Data</button>
+        </nav>
+
+        <!-- Queue Tab -->
+        <div class="tab-content active" id="queue-tab">
+            <!-- Add Player Section -->
+            <section class="section">
+                <h2>Add Player</h2>
+                <div class="add-player-form">
+                    <input type="text" id="playerNameInput" placeholder="Enter player name" maxlength="50">
+                    <button id="addPlayerBtn" class="btn btn-primary">Add Player</button>
+                </div>
+            </section>
+
+            <!-- Session Section -->
+            <section class="section">
+                <h2>Active Session</h2>
+                <div id="sessionSection">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+
+            <!-- Current Game Section -->
+            <section class="section">
+                <h2>Current Game</h2>
+                <div id="currentGameSection">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+
+            <!-- Waiting Players Section -->
+            <section class="section">
+                <h2>Waiting Players</h2>
+                <div id="waitingPlayersSection">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+
+            <!-- Player List Section -->
+            <section class="section">
+                <h2>All Players</h2>
+                <div id="playerListSection">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div class="tab-content" id="sessions-tab">
+            <section class="section">
+                <h2>Past Sessions</h2>
+                <div id="pastSessionsSection">
+                    <!-- Dynamic content -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Data Tab -->
+        <div class="tab-content" id="data-tab">
+            <section class="section">
+                <h2>Data Tools</h2>
+                <div class="data-tools">
+                    <button id="exportJsonBtn" class="btn btn-secondary">Export JSON Backup</button>
+                    <div class="import-section">
+                        <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+                        <button id="importJsonBtn" class="btn btn-secondary">Import JSON Backup</button>
+                    </div>
+                    <button id="clearPastSessionsBtn" class="btn btn-warning">Clear Past Sessions</button>
+                    <button id="resetAllDataBtn" class="btn btn-danger">Reset All Data</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+        
+        <!-- Session Animation -->
+        <div id="sessionAnimation" class="session-animation">
+            <img src="images/ian.png" alt="Logo" class="session-animation-logo">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed:', err));
+        }
+    </script>
+</body>
+</html>
