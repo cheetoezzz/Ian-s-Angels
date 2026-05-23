@@ -282,3 +282,5 @@ This is a simple, standalone application with no external dependencies. If you e
 - Ensure you're using a modern browser
 - Try clearing browser cache
 - Check browser console for errors (F12 → Console)
+#   I a n - s - A n g e l s  
+ 
