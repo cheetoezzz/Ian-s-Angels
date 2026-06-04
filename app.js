@@ -1,6 +1,16 @@
 // ==================== DATA STORAGE ====================
 
 const STORAGE_KEY = 'pickleball_queue_data';
+const QUEUE_MODES = {
+    fair_rotation: {
+        label: 'Fair Rotation',
+        description: 'Strictly balances play time so everyone gets equal turns.'
+    },
+    winner_priority: {
+        label: 'Winner Priority',
+        description: 'Winners get priority for the next game, while still keeping player rotation fair.'
+    }
+};
 
 function getDefaultData() {
     return {
@@ -53,7 +63,8 @@ function migrateData(data) {
                 dateStarted: data.currentGame.dateGenerated || new Date().toISOString(),
                 dateEnded: null,
                 status: 'active',
-                currentGame: data.currentGame,
+                queueMode: 'fair_rotation',
+                currentGame: migrateGame(data.currentGame),
                 games: [],
                 playerStats: {}
             };
@@ -72,27 +83,13 @@ function migrateData(data) {
                 dateStarted: data.pastGames[data.pastGames.length - 1]?.dateGenerated || new Date().toISOString(),
                 dateEnded: data.pastGames[0]?.dateCompleted || new Date().toISOString(),
                 status: 'completed',
-                games: data.pastGames,
+                queueMode: 'fair_rotation',
+                games: data.pastGames.map(migrateGame),
                 playerStats: {}
             };
             
             // Build player stats for the imported session
-            const stats = {};
-            data.pastGames.forEach(game => {
-                [...game.teamA, ...game.teamB].forEach(player => {
-                    if (!stats[player.id]) {
-                        stats[player.id] = {
-                            playerId: player.id,
-                            playerName: player.name,
-                            gamesPlayedInSession: 0,
-                            partners: [],
-                            opponents: []
-                        };
-                    }
-                    stats[player.id].gamesPlayedInSession++;
-                });
-            });
-            importedSession.playerStats = stats;
+            importedSession.playerStats = buildStatsFromGames(importedSession.games);
             
             migrated.pastSessions.push(importedSession);
         }
@@ -116,8 +113,113 @@ function migrateData(data) {
     if (data.pastSessions === undefined) {
         data.pastSessions = [];
     }
+
+    if (data.activeSession) {
+        data.activeSession = migrateSession(data.activeSession);
+    }
+    data.pastSessions = data.pastSessions.map(migrateSession);
     
     return data;
+}
+
+function migrateSession(session) {
+    const migrated = {
+        ...session,
+        queueMode: session.queueMode || 'fair_rotation',
+        currentGame: session.currentGame ? migrateGame(session.currentGame) : null,
+        games: Array.isArray(session.games) ? session.games.map(migrateGame) : [],
+        playerStats: session.playerStats || {}
+    };
+
+    migrated.playerStats = migratePlayerStats(migrated.playerStats, migrated.games);
+    return migrated;
+}
+
+function migrateGame(game) {
+    if (!game) return game;
+    const teamA = game.teamA || [];
+    const teamB = game.teamB || [];
+    const teamAScore = normalizeScore(game.teamAScore);
+    const teamBScore = normalizeScore(game.teamBScore);
+    let winningTeam = game.winningTeam ?? null;
+    let losingTeam = game.losingTeam ?? null;
+
+    if (!winningTeam && Number.isFinite(teamAScore) && Number.isFinite(teamBScore) && teamAScore !== teamBScore) {
+        winningTeam = teamAScore > teamBScore ? 'A' : 'B';
+        losingTeam = winningTeam === 'A' ? 'B' : 'A';
+    }
+
+    const winnerPlayerIds = game.winnerPlayerIds || (winningTeam === 'A' ? teamA : winningTeam === 'B' ? teamB : []).map(p => p.id);
+    const loserPlayerIds = game.loserPlayerIds || (losingTeam === 'A' ? teamA : losingTeam === 'B' ? teamB : []).map(p => p.id);
+
+    return {
+        ...game,
+        teamAScore,
+        teamBScore,
+        winningTeam,
+        losingTeam,
+        winnerPlayerIds,
+        loserPlayerIds
+    };
+}
+
+function getEmptySessionStat(player) {
+    return {
+        playerId: player.id,
+        playerName: player.name,
+        gamesPlayedInSession: 0,
+        wins: 0,
+        losses: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        pointDifference: 0,
+        currentWinStreak: 0,
+        currentLossStreak: 0,
+        partners: [],
+        opponents: []
+    };
+}
+
+function migratePlayerStats(playerStats, games) {
+    const stats = {};
+    Object.values(playerStats || {}).forEach(stat => {
+        stats[stat.playerId] = {
+            playerId: stat.playerId,
+            playerName: stat.playerName,
+            gamesPlayedInSession: stat.gamesPlayedInSession || 0,
+            wins: stat.wins || 0,
+            losses: stat.losses || 0,
+            pointsFor: stat.pointsFor || 0,
+            pointsAgainst: stat.pointsAgainst || 0,
+            pointDifference: stat.pointDifference ?? ((stat.pointsFor || 0) - (stat.pointsAgainst || 0)),
+            currentWinStreak: stat.currentWinStreak || 0,
+            currentLossStreak: stat.currentLossStreak || 0,
+            partners: Array.isArray(stat.partners) ? stat.partners : [],
+            opponents: Array.isArray(stat.opponents) ? stat.opponents : []
+        };
+    });
+
+    const hasLegacyStats = Object.values(stats).some(stat => stat.gamesPlayedInSession > 0 && stat.wins === 0 && stat.losses === 0 && stat.pointsFor === 0 && stat.pointsAgainst === 0);
+    const hasScoredGames = games.some(game => game.winningTeam);
+    if (hasLegacyStats && hasScoredGames) {
+        return buildStatsFromGames(games);
+    }
+
+    return stats;
+}
+
+function buildStatsFromGames(games) {
+    const stats = {};
+    [...games].reverse().forEach(game => {
+        const allPlayers = [...(game.teamA || []), ...(game.teamB || [])];
+        allPlayers.forEach(player => {
+            if (!stats[player.id]) {
+                stats[player.id] = getEmptySessionStat(player);
+            }
+        });
+        applyGameToStats(stats, game);
+    });
+    return stats;
 }
 
 function saveData(data) {
@@ -286,13 +388,109 @@ function selectPlayersForGame(data) {
     };
 }
 
+function generateWinnerPriorityQueue(activePlayers, activeSession) {
+    if (activePlayers.length < 4) {
+        return { success: false, message: 'Not enough players to start a game. Need at least 4 active players.' };
+    }
+
+    const stats = activeSession.playerStats || {};
+    const lastCompletedGame = (activeSession.games || []).find(game => game.status === 'completed');
+    const previousWinnerIds = new Set(lastCompletedGame?.winnerPlayerIds || []);
+    const activeStats = activePlayers.map(player => ({
+        player,
+        gamesPlayed: stats[player.id]?.gamesPlayedInSession || 0
+    }));
+    const minGamesPlayed = Math.min(...activeStats.map(item => item.gamesPlayed));
+
+    const canSelectWithoutGap = (item) => {
+        const projectedGames = item.gamesPlayed + 1;
+        return projectedGames <= minGamesPlayed + 1 || activePlayers.length === 4;
+    };
+
+    const sortedPlayers = activeStats
+        .filter(canSelectWithoutGap)
+        .sort((a, b) => {
+            if (a.gamesPlayed !== b.gamesPlayed) {
+                return a.gamesPlayed - b.gamesPlayed;
+            }
+
+            const aWinner = previousWinnerIds.has(a.player.id) ? 1 : 0;
+            const bWinner = previousWinnerIds.has(b.player.id) ? 1 : 0;
+            if (aWinner !== bWinner) {
+                return bWinner - aWinner;
+            }
+
+            if (a.player.waitingSinceGameNumber !== b.player.waitingSinceGameNumber) {
+                return a.player.waitingSinceGameNumber - b.player.waitingSinceGameNumber;
+            }
+
+            const aLastPlayed = a.player.lastPlayedGameNumber === null ? -1 : a.player.lastPlayedGameNumber;
+            const bLastPlayed = b.player.lastPlayedGameNumber === null ? -1 : b.player.lastPlayedGameNumber;
+            if (aLastPlayed !== bLastPlayed) {
+                return aLastPlayed - bLastPlayed;
+            }
+
+            return Math.random() - 0.5;
+        });
+
+    let selectedPlayers = sortedPlayers.slice(0, 4).map(item => item.player);
+
+    if (selectedPlayers.length < 4) {
+        const selectedIds = new Set(selectedPlayers.map(player => player.id));
+        const fallbackPlayers = activeStats
+            .filter(item => !selectedIds.has(item.player.id))
+            .sort((a, b) => {
+                if (a.gamesPlayed !== b.gamesPlayed) return a.gamesPlayed - b.gamesPlayed;
+                return Math.random() - 0.5;
+            })
+            .map(item => item.player);
+        selectedPlayers = [...selectedPlayers, ...fallbackPlayers].slice(0, 4);
+    }
+
+    const { teamA, teamB } = pairSelectedPlayers(selectedPlayers, activeSession);
+    return { success: true, teamA, teamB };
+}
+
+function pairSelectedPlayers(selectedPlayers, activeSession) {
+    const shuffled = [...selectedPlayers].sort(() => Math.random() - 0.5);
+    const pairings = [
+        [[shuffled[0], shuffled[1]], [shuffled[2], shuffled[3]]],
+        [[shuffled[0], shuffled[2]], [shuffled[1], shuffled[3]]],
+        [[shuffled[0], shuffled[3]], [shuffled[1], shuffled[2]]]
+    ];
+    const stats = activeSession?.playerStats || {};
+
+    const partnershipCount = (a, b) => {
+        const sessionPartners = stats[a.id]?.partners || [];
+        const globalPartners = a.partnerHistory || [];
+        return sessionPartners.filter(id => id === b.id).length + globalPartners.filter(id => id === b.id).length;
+    };
+
+    const ranked = pairings.sort((a, b) => {
+        const aScore = partnershipCount(a[0][0], a[0][1]) + partnershipCount(a[1][0], a[1][1]);
+        const bScore = partnershipCount(b[0][0], b[0][1]) + partnershipCount(b[1][0], b[1][1]);
+        if (aScore !== bScore) return aScore - bScore;
+        return Math.random() - 0.5;
+    });
+
+    return {
+        teamA: ranked[0][0],
+        teamB: ranked[0][1]
+    };
+}
+
 // ==================== SESSION MANAGEMENT ====================
 
-function startNewSession() {
+function startNewSession(queueMode = 'fair_rotation') {
     const data = loadData();
     
     if (data.activeSession) {
         showToast('A session is already active. End the current session first.', 'error');
+        return false;
+    }
+
+    if (!QUEUE_MODES[queueMode]) {
+        showToast('Choose a valid queue mode.', 'error');
         return false;
     }
     
@@ -309,13 +507,7 @@ function startNewSession() {
     // Initialize player stats for the session
     const playerStats = {};
     activePlayers.forEach(player => {
-        playerStats[player.id] = {
-            playerId: player.id,
-            playerName: player.name,
-            gamesPlayedInSession: 0,
-            partners: [],
-            opponents: []
-        };
+        playerStats[player.id] = getEmptySessionStat(player);
     });
     
     const session = {
@@ -325,6 +517,7 @@ function startNewSession() {
         dateStarted: new Date().toISOString(),
         dateEnded: null,
         status: 'active',
+        queueMode,
         currentGame: null,
         games: [],
         playerStats: playerStats
@@ -342,6 +535,31 @@ function startNewSession() {
         }
     }, 3000);
     
+    return true;
+}
+
+function updateSessionQueueMode(queueMode) {
+    const data = loadData();
+
+    if (!data.activeSession) {
+        showToast('No active session to update', 'error');
+        return false;
+    }
+
+    if (!QUEUE_MODES[queueMode]) {
+        showToast('Choose a valid queue mode.', 'error');
+        return false;
+    }
+
+    if (data.activeSession.currentGame || data.activeSession.games.length > 0) {
+        showToast('Queue mode cannot be changed after play has started.', 'error');
+        return false;
+    }
+
+    data.activeSession.queueMode = queueMode;
+    saveData(data);
+    renderApp();
+    showToast(`Queue mode set to ${QUEUE_MODES[queueMode].label}`, 'success');
     return true;
 }
 
@@ -397,7 +615,10 @@ function generateNextGame() {
         return false;
     }
     
-    const result = selectPlayersForGame(data);
+    const activePlayers = getActivePlayers(data);
+    const result = data.activeSession.queueMode === 'winner_priority'
+        ? generateWinnerPriorityQueue(activePlayers, data.activeSession)
+        : selectPlayersForGame(data);
     
     if (!result.success) {
         showToast(result.message, 'error');
@@ -411,6 +632,12 @@ function generateNextGame() {
         gameNumber: data.settings.currentGameNumber,
         teamA: result.teamA.map(p => ({ id: p.id, name: p.name })),
         teamB: result.teamB.map(p => ({ id: p.id, name: p.name })),
+        teamAScore: null,
+        teamBScore: null,
+        winningTeam: null,
+        losingTeam: null,
+        winnerPlayerIds: [],
+        loserPlayerIds: [],
         dateGenerated: new Date().toISOString(),
         dateCompleted: null,
         status: 'current'
@@ -432,7 +659,23 @@ function completeCurrentGame() {
     }
     
     const game = data.activeSession.currentGame;
+    const scoreResult = getScoreInputValues();
+
+    if (!scoreResult.success) {
+        showToast(scoreResult.message, 'error');
+        return false;
+    }
+
+    game.teamAScore = scoreResult.teamAScore;
+    game.teamBScore = scoreResult.teamBScore;
+    game.winningTeam = scoreResult.winningTeam;
+    game.losingTeam = scoreResult.losingTeam;
+    game.winnerPlayerIds = (game.winningTeam === 'A' ? game.teamA : game.teamB).map(p => p.id);
+    game.loserPlayerIds = (game.losingTeam === 'A' ? game.teamA : game.teamB).map(p => p.id);
+
     const allPlayerIds = [...game.teamA, ...game.teamB].map(p => p.id);
+    const teamAIds = game.teamA.map(p => p.id);
+    const teamBIds = game.teamB.map(p => p.id);
     
     // Update players who played
     data.players.forEach(player => {
@@ -442,9 +685,6 @@ function completeCurrentGame() {
             player.waitingSinceGameNumber = game.gameNumber + 1;
             
             // Update partner and opponent history
-            const teamAIds = game.teamA.map(p => p.id);
-            const teamBIds = game.teamB.map(p => p.id);
-            
             if (teamAIds.includes(player.id)) {
                 const teammates = teamAIds.filter(id => id !== player.id);
                 player.partnerHistory.push(...teammates);
@@ -454,20 +694,6 @@ function completeCurrentGame() {
                 player.partnerHistory.push(...teammates);
                 player.opponentHistory.push(...teamAIds);
             }
-            
-            // Update session player stats
-            if (data.activeSession.playerStats[player.id]) {
-                data.activeSession.playerStats[player.id].gamesPlayedInSession++;
-                if (teamAIds.includes(player.id)) {
-                    const teammates = teamAIds.filter(id => id !== player.id);
-                    data.activeSession.playerStats[player.id].partners.push(...teammates);
-                    data.activeSession.playerStats[player.id].opponents.push(...teamBIds);
-                } else {
-                    const teammates = teamBIds.filter(id => id !== player.id);
-                    data.activeSession.playerStats[player.id].partners.push(...teammates);
-                    data.activeSession.playerStats[player.id].opponents.push(...teamAIds);
-                }
-            }
         } else {
             // Players who didn't play keep or improve their waiting priority
             if (player.isActive) {
@@ -475,6 +701,8 @@ function completeCurrentGame() {
             }
         }
     });
+
+    applyGameToStats(data.activeSession.playerStats, game);
     
     // Move current game to session games
     game.status = 'completed';
@@ -486,6 +714,113 @@ function completeCurrentGame() {
     renderApp();
     showToast(`Game ${game.gameNumber} completed`, 'success');
     return true;
+}
+
+function getScoreInputValues() {
+    const teamAInput = document.getElementById('teamAScoreInput');
+    const teamBInput = document.getElementById('teamBScoreInput');
+
+    if (!teamAInput || !teamBInput) {
+        return { success: false, message: 'Score inputs are missing.' };
+    }
+
+    const teamARaw = teamAInput.value.trim();
+    const teamBRaw = teamBInput.value.trim();
+
+    if (teamARaw === '' || teamBRaw === '') {
+        return { success: false, message: 'Enter scores for both teams before completing the game.' };
+    }
+
+    const teamAScore = Number(teamARaw);
+    const teamBScore = Number(teamBRaw);
+    const validation = validatePickleballScore(teamAScore, teamBScore);
+
+    if (!validation.isValid) {
+        return { success: false, message: validation.message };
+    }
+
+    return {
+        success: true,
+        teamAScore,
+        teamBScore,
+        winningTeam: validation.winningTeam,
+        losingTeam: validation.losingTeam
+    };
+}
+
+function validatePickleballScore(teamAScore, teamBScore) {
+    if (!Number.isFinite(teamAScore) || !Number.isFinite(teamBScore) || !Number.isInteger(teamAScore) || !Number.isInteger(teamBScore)) {
+        return { isValid: false, message: 'Scores must be valid whole numbers.', winningTeam: null, losingTeam: null };
+    }
+
+    if (teamAScore < 0 || teamBScore < 0) {
+        return { isValid: false, message: 'Scores cannot be negative.', winningTeam: null, losingTeam: null };
+    }
+
+    if (teamAScore === teamBScore) {
+        return { isValid: false, message: 'Scores cannot be tied. Enter a winning score.', winningTeam: null, losingTeam: null };
+    }
+
+    const winningScore = Math.max(teamAScore, teamBScore);
+    const lead = Math.abs(teamAScore - teamBScore);
+
+    if (winningScore < 11) {
+        return { isValid: false, message: 'The winning team must score at least 11 points.', winningTeam: null, losingTeam: null };
+    }
+
+    if (lead < 2) {
+        return { isValid: false, message: 'A team must win by at least 2 points.', winningTeam: null, losingTeam: null };
+    }
+
+    const winningTeam = teamAScore > teamBScore ? 'A' : 'B';
+    const losingTeam = winningTeam === 'A' ? 'B' : 'A';
+
+    return { isValid: true, message: '', winningTeam, losingTeam };
+}
+
+function applyGameToStats(playerStats, game) {
+    const teamAIds = game.teamA.map(p => p.id);
+    const teamBIds = game.teamB.map(p => p.id);
+    const allPlayers = [...game.teamA, ...game.teamB];
+
+    allPlayers.forEach(player => {
+        if (!playerStats[player.id]) {
+            playerStats[player.id] = getEmptySessionStat(player);
+        }
+    });
+
+    allPlayers.forEach(player => {
+        const stat = playerStats[player.id];
+        const isTeamA = teamAIds.includes(player.id);
+        const teammateIds = isTeamA ? teamAIds.filter(id => id !== player.id) : teamBIds.filter(id => id !== player.id);
+        const opponentIds = isTeamA ? teamBIds : teamAIds;
+        const pointsFor = isTeamA ? game.teamAScore : game.teamBScore;
+        const pointsAgainst = isTeamA ? game.teamBScore : game.teamAScore;
+        const isWinner = game.winnerPlayerIds.includes(player.id);
+
+        stat.playerName = player.name;
+        stat.gamesPlayedInSession++;
+        stat.partners.push(...teammateIds);
+        stat.opponents.push(...opponentIds);
+
+        if (Number.isFinite(pointsFor) && Number.isFinite(pointsAgainst)) {
+            stat.pointsFor += pointsFor;
+            stat.pointsAgainst += pointsAgainst;
+            stat.pointDifference = stat.pointsFor - stat.pointsAgainst;
+        }
+
+        if (game.winningTeam) {
+            if (isWinner) {
+                stat.wins++;
+                stat.currentWinStreak++;
+                stat.currentLossStreak = 0;
+            } else {
+                stat.losses++;
+                stat.currentLossStreak++;
+                stat.currentWinStreak = 0;
+            }
+        }
+    });
 }
 
 function cancelCurrentGame() {
@@ -551,8 +886,7 @@ function importJson(file) {
             
             // Confirm before replacing
             if (confirm('This will replace all current data. Are you sure?')) {
-                // Migrate if old structure
-                const dataToSave = hasOldStructure ? migrateData(importedData) : importedData;
+                const dataToSave = migrateData(importedData);
                 saveData(dataToSave);
                 renderApp();
                 showToast('Backup imported successfully', 'success');
@@ -605,13 +939,14 @@ function renderSession(data) {
     if (!data.activeSession) {
         container.innerHTML = `
             <div class="no-session">
-                <p>No active session</p>
+                <div class="empty-state-kicker">No active session</div>
+                <p>Start a session to begin queuing players.</p>
                 <button id="startSessionBtn" class="btn btn-primary">Start New Session</button>
             </div>
         `;
         const btn = document.getElementById('startSessionBtn');
         if (btn) {
-            btn.addEventListener('click', startNewSession);
+            btn.addEventListener('click', openQueueModeModal);
         }
         return;
     }
@@ -623,8 +958,11 @@ function renderSession(data) {
     container.innerHTML = `
         <div class="session-card">
             <div class="session-header">
-                <span class="session-name">${session.sessionName}</span>
-                <span class="session-date">Started: ${dateStr}</span>
+                <div>
+                    <span class="session-name">${session.sessionName}</span>
+                    <span class="session-date">Started: ${dateStr}</span>
+                </div>
+                <span class="queue-mode-badge">${getQueueModeLabel(session.queueMode)}</span>
             </div>
             <div class="session-stats">
                 <span class="session-stat"><span class="session-stat-label">Games:</span> ${session.games.length}</span>
@@ -660,18 +998,29 @@ function renderCurrentGame(data) {
     container.innerHTML = `
         <div class="game-card">
             <div class="game-number">Game #${game.gameNumber}</div>
-            
-            <div class="team-card team-a">
-                <div class="team-label">Team A</div>
-                <div class="team-players">
-                    ${game.teamA.map(p => `<div class="team-player">${p.name}</div>`).join('')}
+            <div class="match-card">
+                <div class="team-card team-a">
+                    <div class="team-label">Team A</div>
+                    <div class="team-players">
+                        ${game.teamA.map(p => `<div class="team-player">${p.name}</div>`).join('')}
+                    </div>
+                    <label class="score-field team-score-field">
+                        <span>Team A Score</span>
+                        <input type="number" id="teamAScoreInput" min="0" step="1" inputmode="numeric" placeholder="0">
+                    </label>
                 </div>
-            </div>
-            
-            <div class="team-card team-b">
-                <div class="team-label">Team B</div>
-                <div class="team-players">
-                    ${game.teamB.map(p => `<div class="team-player">${p.name}</div>`).join('')}
+
+                <div class="versus-indicator">VS</div>
+
+                <div class="team-card team-b">
+                    <div class="team-label">Team B</div>
+                    <div class="team-players">
+                        ${game.teamB.map(p => `<div class="team-player">${p.name}</div>`).join('')}
+                    </div>
+                    <label class="score-field team-score-field">
+                        <span>Team B Score</span>
+                        <input type="number" id="teamBScoreInput" min="0" step="1" inputmode="numeric" placeholder="0">
+                    </label>
                 </div>
             </div>
             
@@ -716,7 +1065,7 @@ function renderPlayerList(data) {
     if (data.players.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon">👤</div>
+                <img src="images/ian2.png" alt="" class="empty-state-icon">
                 <div class="empty-state-text">No players added yet</div>
             </div>
         `;
@@ -793,11 +1142,9 @@ function renderPastSessions(data) {
     container.innerHTML = data.pastSessions.map(session => {
         const startedDate = new Date(session.dateStarted);
         const endedDate = new Date(session.dateEnded);
-        const startedStr = startedDate.toLocaleDateString() + ' ' + startedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const endedStr = endedDate.toLocaleDateString() + ' ' + endedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        // Build player stats summary
-        const playerCount = Object.keys(session.playerStats).length;
+        const startedStr = formatDateTime(startedDate);
+        const endedStr = formatDateTime(endedDate);
+        const playerCount = Object.keys(session.playerStats || {}).length;
         const totalGames = session.games.length;
         
         return `
@@ -806,14 +1153,19 @@ function renderPastSessions(data) {
                     <div class="past-session-info">
                         <div class="past-session-name">${session.sessionName}</div>
                         <div class="past-session-dates">Started: ${startedStr} | Ended: ${endedStr}</div>
-                        <div class="past-session-stats-summary">${totalGames} games • ${playerCount} players</div>
+                        <div class="past-session-stats-summary"><span class="queue-mode-badge small">${getQueueModeLabel(session.queueMode)}</span> ${totalGames} games | ${playerCount} players</div>
                     </div>
                     <button class="expand-btn" data-session-id="${session.sessionId}">Expand</button>
                 </div>
                 <div class="session-games-list" id="games-${session.sessionId}">
+                    ${renderSessionStatsSummary(session.playerStats)}
                     ${session.games.map(game => {
                         const completedDate = new Date(game.dateCompleted);
-                        const dateStr = completedDate.toLocaleDateString() + ' ' + completedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = formatDateTime(completedDate);
+                        const scoreText = hasRecordedScore(game)
+                            ? `Team A ${game.teamAScore} - Team B ${game.teamBScore}`
+                            : 'No score recorded.';
+                        const winnerText = game.winningTeam ? `Team ${game.winningTeam}` : 'No score recorded.';
                         
                         return `
                             <div class="session-game-item">
@@ -821,14 +1173,15 @@ function renderPastSessions(data) {
                                     <span class="session-game-number">Game #${game.gameNumber}</span>
                                     <span class="session-game-date">${dateStr}</span>
                                 </div>
+                                <div class="session-game-score">${scoreText} | Winner: ${winnerText}</div>
                                 <div class="session-game-teams">
                                     <div class="session-game-team">
                                         <span class="session-game-team-label">Team A:</span>
-                                        ${game.teamA.map(p => p.name).join(', ')}
+                                        ${game.teamA.map(p => p.name).join(', ')}${hasRecordedScore(game) ? ` (${game.teamAScore})` : ''}
                                     </div>
                                     <div class="session-game-team">
                                         <span class="session-game-team-label">Team B:</span>
-                                        ${game.teamB.map(p => p.name).join(', ')}
+                                        ${game.teamB.map(p => p.name).join(', ')}${hasRecordedScore(game) ? ` (${game.teamBScore})` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -851,6 +1204,117 @@ function renderPastSessions(data) {
 }
 
 // ==================== UTILITY FUNCTIONS ====================
+
+function openQueueModeModal() {
+    const modal = document.getElementById('queueModeModal');
+    const defaultOption = document.querySelector('input[name="modalQueueMode"][value="fair_rotation"]');
+
+    if (defaultOption) {
+        defaultOption.checked = true;
+    }
+
+    if (modal) {
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+}
+
+function closeQueueModeModal() {
+    const modal = document.getElementById('queueModeModal');
+
+    if (modal) {
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function confirmQueueModeSelection() {
+    const selectedMode = document.querySelector('input[name="modalQueueMode"]:checked')?.value || 'fair_rotation';
+
+    if (startNewSession(selectedMode)) {
+        closeQueueModeModal();
+    }
+}
+
+function getQueueModeLabel(queueMode) {
+    return QUEUE_MODES[queueMode]?.label || QUEUE_MODES.fair_rotation.label;
+}
+
+function normalizeScore(score) {
+    if (score === null || score === undefined || score === '') {
+        return null;
+    }
+
+    const numericScore = Number(score);
+    return Number.isFinite(numericScore) ? numericScore : null;
+}
+
+function formatDateTime(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return 'Unknown';
+    }
+
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function hasRecordedScore(game) {
+    return Number.isFinite(game.teamAScore) && Number.isFinite(game.teamBScore);
+}
+
+function getSortedSessionStats(playerStats) {
+    return Object.values(playerStats || {}).sort((a, b) => {
+        if (a.wins !== b.wins) return b.wins - a.wins;
+        if (a.pointDifference !== b.pointDifference) return b.pointDifference - a.pointDifference;
+        return b.gamesPlayedInSession - a.gamesPlayedInSession;
+    });
+}
+
+function renderSessionStatsSummary(playerStats) {
+    const stats = getSortedSessionStats(playerStats);
+
+    if (stats.length === 0) {
+        return `
+            <div class="session-stats-history">
+                <div class="session-stats-heading">Player Stats</div>
+                <p class="session-stats-empty">No player stats recorded.</p>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="session-stats-history">
+            <div class="session-stats-heading">Player Stats</div>
+            <div class="stats-table-wrap">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>GP</th>
+                            <th>W</th>
+                            <th>L</th>
+                            <th>PF</th>
+                            <th>PA</th>
+                            <th>+/-</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stats.map(stat => `
+                            <tr>
+                                <td>${stat.playerName}</td>
+                                <td>${stat.gamesPlayedInSession}</td>
+                                <td>${stat.wins}</td>
+                                <td>${stat.losses}</td>
+                                <td>${stat.pointsFor}</td>
+                                <td>${stat.pointsAgainst}</td>
+                                <td>${stat.pointDifference}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
 
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');
@@ -927,6 +1391,37 @@ function setupEventListeners() {
     
     // Reset all data
     document.getElementById('resetAllDataBtn').addEventListener('click', resetAllData);
+
+    const queueModeModal = document.getElementById('queueModeModal');
+    const closeQueueModeModalBtn = document.getElementById('closeQueueModeModalBtn');
+    const cancelQueueModeModalBtn = document.getElementById('cancelQueueModeModalBtn');
+    const confirmQueueModeBtn = document.getElementById('confirmQueueModeBtn');
+
+    if (closeQueueModeModalBtn) {
+        closeQueueModeModalBtn.addEventListener('click', closeQueueModeModal);
+    }
+
+    if (cancelQueueModeModalBtn) {
+        cancelQueueModeModalBtn.addEventListener('click', closeQueueModeModal);
+    }
+
+    if (confirmQueueModeBtn) {
+        confirmQueueModeBtn.addEventListener('click', confirmQueueModeSelection);
+    }
+
+    if (queueModeModal) {
+        queueModeModal.addEventListener('click', (e) => {
+            if (e.target === queueModeModal) {
+                closeQueueModeModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeQueueModeModal();
+        }
+    });
 }
 
 // ==================== INITIALIZATION ====================

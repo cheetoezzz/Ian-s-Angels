@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0f5132">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Ian's Angels</title>
+    <title>Pickleball Queue</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="images/ian.png">
     <link rel="icon" href="images/ian.png">
@@ -16,9 +16,13 @@
     <div class="app">
         <!-- Header -->
         <header class="header">
-            <img src="images/ian.png" alt="Logo" class="header-logo header-logo-left">
-            <h1>Ian's Angels</h1>
-            <p class="subtitle">Fair one-court player rotation</p>
+            <div class="header-brand">
+                <img src="images/ian.png" alt="Logo" class="header-logo">
+                <div class="header-copy">
+                    <h1>Ian's Angels</h1>
+                    <p class="subtitle">Fair one-court player rotation</p>
+                </div>
+            </div>
         </header>
 
         <!-- Navigation Tabs -->
@@ -57,7 +61,7 @@
 
             <!-- Waiting Players Section -->
             <section class="section">
-                <h2>Waiting Players</h2>
+                <h2>Waiting Next</h2>
                 <div id="waitingPlayersSection">
                     <!-- Dynamic content -->
                 </div>
@@ -87,23 +91,77 @@
             <section class="section">
                 <h2>Data Tools</h2>
                 <div class="data-tools">
-                    <button id="exportJsonBtn" class="btn btn-secondary">Export JSON Backup</button>
-                    <div class="import-section">
+                    <div class="data-tool-card">
+                        <div>
+                            <h3>Export Backup</h3>
+                            <p>Download a JSON copy of players, sessions, scores, and history.</p>
+                        </div>
+                        <button id="exportJsonBtn" class="btn btn-secondary">Export JSON Backup</button>
+                    </div>
+                    <div class="data-tool-card">
+                        <div>
+                            <h3>Import Backup</h3>
+                            <p>Restore the app from a previously exported JSON backup.</p>
+                        </div>
                         <input type="file" id="importJsonInput" accept=".json" style="display: none;">
                         <button id="importJsonBtn" class="btn btn-secondary">Import JSON Backup</button>
                     </div>
-                    <button id="clearPastSessionsBtn" class="btn btn-warning">Clear Past Sessions</button>
-                    <button id="resetAllDataBtn" class="btn btn-danger">Reset All Data</button>
+                    <div class="data-tool-card">
+                        <div>
+                            <h3>Clear Past Sessions</h3>
+                            <p>Remove completed session history while keeping current players.</p>
+                        </div>
+                        <button id="clearPastSessionsBtn" class="btn btn-warning">Clear Past Sessions</button>
+                    </div>
+                    <div class="data-tool-card danger-card">
+                        <div>
+                            <h3>Reset All Data</h3>
+                            <p>Delete all players, sessions, settings, scores, and history.</p>
+                        </div>
+                        <button id="resetAllDataBtn" class="btn btn-danger">Reset All Data</button>
+                    </div>
                 </div>
             </section>
         </div>
 
         <!-- Toast Notification -->
         <div id="toast" class="toast"></div>
+
+        <!-- Queue Mode Modal -->
+        <div id="queueModeModal" class="modal-overlay" aria-hidden="true">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="queueModeModalTitle">
+                <div class="modal-header">
+                    <h2 id="queueModeModalTitle">Choose Queue Mode</h2>
+                    <button id="closeQueueModeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="mode-picker modal-mode-picker" role="radiogroup" aria-label="Queue mode">
+                        <label class="mode-option">
+                            <input type="radio" name="modalQueueMode" value="fair_rotation" checked>
+                            <span class="mode-option-content">
+                                <span class="mode-option-title">Fair Rotation</span>
+                                <span class="mode-option-description">Strictly balances play time so everyone gets equal turns.</span>
+                            </span>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="modalQueueMode" value="winner_priority">
+                            <span class="mode-option-content">
+                                <span class="mode-option-title">Winner Priority</span>
+                                <span class="mode-option-description">Winners get priority for the next game, while still keeping player rotation fair.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelQueueModeModalBtn" class="btn btn-secondary" type="button">Cancel</button>
+                    <button id="confirmQueueModeBtn" class="btn btn-primary" type="button">Start Session</button>
+                </div>
+            </div>
+        </div>
         
         <!-- Session Animation -->
         <div id="sessionAnimation" class="session-animation">
-            <img src="images/ian.png" alt="Logo" class="session-animation-logo">
+            <img src="images/ian2.png" alt="Logo" class="session-animation-logo">
         </div>
     </div>
 
