@@ -25,13 +25,19 @@
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="queue">Queue</button>
-            <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
-            <button class="tab-btn" data-tab="sessions">Sessions</button>
-            <button class="tab-btn" data-tab="data">Data</button>
-        </nav>
+        <!-- Dashboard navigation -->
+        <div class="dashboard-navigation">
+            <button id="navigationToggle" class="navigation-toggle" type="button" aria-expanded="false" aria-controls="dashboardMenu">
+                <span id="currentViewLabel">Queue</span>
+                <span class="navigation-toggle-label">Menu <span class="burger-icon" aria-hidden="true"><span></span><span></span><span></span></span></span>
+            </button>
+            <nav id="dashboardMenu" class="tabs dashboard-menu" aria-label="Dashboard navigation" hidden>
+                <button class="tab-btn active" type="button" data-tab="queue" aria-current="page">Queue</button>
+                <button class="tab-btn" type="button" data-tab="leaderboard">Leaderboard</button>
+                <button class="tab-btn" type="button" data-tab="sessions">Sessions</button>
+                <button class="tab-btn" type="button" data-tab="data">Data</button>
+            </nav>
+        </div>
 
         <!-- Queue Tab -->
         <div class="tab-content active" id="queue-tab">

@@ -310,7 +310,7 @@ Schema version 2 keeps the `pickleball_queue_data` key and existing records, add
 finalLeaderboard and cancelledGames. Older final snapshots are rebuilt from stored scores for points-based ranking. Legacy `current` states become `in_progress`. Existing
 backups remain importable and exports include the new fields. Prepared lineups survive reload
 and regenerate if a selected player is removed, inactive, or has `isAvailable: false`. Use the
-existing active toggle to mark players unavailable. Service worker cache v5 includes both logos.
+existing active toggle to mark players unavailable. Service worker cache v6 includes both logos.
 
 Run `node queue.test.cjs`, `node --check app.js`, and `node --check service-worker.js`.
 The regression suite uses a simulated DOM and storage, without additional dependencies.
@@ -367,7 +367,7 @@ The PWA manifest permits any orientation. Orientation/fullscreen requests may be
 blocked by the browser; the **Landscape** button retries with a user gesture.
 Portrait displays a rotation hint and retains working controls. Real device browser
 and OS support varies. The page works without locking or fullscreen permissions.
-Service worker cache v5 includes all scoring assets and handles match-ID query URLs
+Service worker cache v6 includes all scoring assets and handles match-ID query URLs
 offline. Serve from localhost or HTTPS and load once online before offline use.
 
 ### Automated checks
@@ -404,3 +404,5 @@ mode field and rejects unsupported modes, so provisional rally scoring can be ad
 separately later. Court diagrams show required serving/receiving positions, not
 players' unrestricted movement during a live rally. Very long names are shortened
 visually on compact panels while full names remain in the match record and titles.
+
+Dashboard views are available from the burger Menu button. The menu shows Queue, Leaderboard, Sessions and Data vertically, marks the current view, and closes after selection, an outside click, focus leaving the menu, or Escape.

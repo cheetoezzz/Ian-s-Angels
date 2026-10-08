@@ -70,7 +70,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  assert.equal(await evaluate('document.getElementById("setupDialog").open'),true);
  await evaluate(`document.getElementById('setupDialog').close()`);
  await until('!!navigator.serviceWorker.controller');
- const cached=await evaluate(`caches.open('pickleball-queue-v5').then(async c=>Promise.all(['./scoring.html','./scoring.css','./scoring.js','./scoring-engine.js'].map(p=>c.match(p).then(Boolean))))`);
+ const cached=await evaluate(`caches.open('pickleball-queue-v6').then(async c=>Promise.all(['./scoring.html','./scoring.css','./scoring.js','./scoring-engine.js'].map(p=>c.match(p).then(Boolean))))`);
  assert.ok(cached.every(Boolean),'all scoring assets precached');
  await call('Network.enable');await call('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
  await navigate('http://127.0.0.1:8765/scoring.html?match='+pendingId+'&offline=unvisited');

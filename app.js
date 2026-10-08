@@ -1364,18 +1364,45 @@ function showToast(message, type = 'info') {
 function setupTabNavigation() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    const toggle = document.getElementById('navigationToggle');
+    const menu = document.getElementById('dashboardMenu');
+    const currentView = document.getElementById('currentViewLabel');
+
+    function closeNavigation(returnFocus = false) {
+        menu.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        if (returnFocus) toggle.focus();
+    }
+
+    toggle.addEventListener('click', () => {
+        const opening = menu.hidden;
+        menu.hidden = !opening;
+        toggle.setAttribute('aria-expanded', String(opening));
+    });
+    document.addEventListener('click', event => {
+        if (!menu.hidden && !event.target.closest('.dashboard-navigation')) closeNavigation();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !menu.hidden) closeNavigation(true);
+    });
+    document.addEventListener('focusin', event => {
+        if (!menu.hidden && !event.target.closest('.dashboard-navigation')) closeNavigation();
+    });
 
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             const tabId = button.dataset.tab;
-
-            // Remove active class from all buttons and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
+            const wasOpen = !menu.hidden;
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.removeAttribute('aria-current');
+            });
             tabContents.forEach(content => content.classList.remove('active'));
-
-            // Add active class to clicked button and corresponding content
             button.classList.add('active');
+            button.setAttribute('aria-current', 'page');
             document.getElementById(`${tabId}-tab`).classList.add('active');
+            currentView.textContent = button.textContent;
+            closeNavigation(wasOpen);
         });
     });
 }

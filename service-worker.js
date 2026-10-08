@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'pickleball-queue-v5';
+const CACHE_NAME = 'pickleball-queue-v6';
 const ASSETS = [
     './', './index.html', './styles.css', './app.js', './manifest.json',
     './scoring.html', './scoring.css', './scoring.js', './scoring-engine.js',
