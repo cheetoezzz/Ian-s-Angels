@@ -1,81 +1,35 @@
-const CACHE_NAME = 'pickleball-queue-v1';
+﻿const CACHE_NAME = 'pickleball-queue-v5';
 const ASSETS = [
-    './',
-    './index.html',
-    './styles.css',
-    './app.js',
-    './manifest.json',
-    './images/ian.png'
+    './', './index.html', './styles.css', './app.js', './manifest.json',
+    './scoring.html', './scoring.css', './scoring.js', './scoring-engine.js',
+    './images/ian.png', './images/ian2.png'
 ];
 
-// Install event - cache assets
-self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('Opened cache');
-                return cache.addAll(ASSETS);
-            })
-            .catch((error) => {
-                console.error('Cache install failed:', error);
-            })
-    );
-    self.skipWaiting();
+self.addEventListener('install', event => {
+    // A failed precache must not replace the working offline version.
+    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cacheName) => {
-                        if (cacheName !== CACHE_NAME) {
-                            console.log('Deleting old cache:', cacheName);
-                            return caches.delete(cacheName);
-                        }
-                    })
-                );
-            })
-    );
-    self.clients.claim();
+self.addEventListener('activate', event => {
+    event.waitUntil(caches.keys().then(names => Promise.all(
+        names.filter(name => name.startsWith('pickleball-queue-') && name !== CACHE_NAME).map(name => caches.delete(name))
+    )).then(() => self.clients.claim()));
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-
-                // Clone the request
-                const fetchRequest = event.request.clone();
-
-                return fetch(fetchRequest)
-                    .then((response) => {
-                        // Check if valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-
-                        // Clone the response
-                        const responseToCache = response.clone();
-
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return response;
-                    })
-                    .catch((error) => {
-                        console.error('Fetch failed:', error);
-                        // Return a custom offline page or fallback
-                        return caches.match('./index.html');
-                    });
-            })
-    );
+self.addEventListener('fetch', event => {
+    if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
+    const navigation = event.request.mode === 'navigate';
+    event.respondWith(caches.open(CACHE_NAME).then(async cache => {
+        // Match-ID query parameters select stored data, not a different HTML asset.
+        const cached = await cache.match(event.request, {ignoreSearch: navigation});
+        if (cached) return cached;
+        try {
+            const response = await fetch(event.request);
+            if (response.ok && response.type === 'basic') await cache.put(event.request, response.clone());
+            return response;
+        } catch (error) {
+            if (navigation) return (await cache.match('./index.html')) || Response.error();
+            return Response.error();
+        }
+    }));
 });

@@ -1607,3 +1607,28 @@ select:focus-visible,
         padding: 0;
     }
 }
+
+/* Upcoming assignments and session results */
+.upcoming-card { background: var(--primary-soft); border: 1px solid #acd4b9; border-radius: 18px; padding: 20px; box-shadow: var(--shadow-sm); }
+.upcoming-teams { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; text-align: center; margin: 20px 0; }
+.lineup-status, .ranking-note { color: var(--muted); margin: 14px 0; font-size: .9rem; }
+.upcoming-card .btn { margin-top: 10px; width: 100%; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+:focus-visible { outline: 3px solid #d4a536; outline-offset: 3px; }
+.leaderboard-header { margin: 20px 0; color: var(--primary-dark); }
+.leaderboard-controls { display: flex; gap: 14px; margin: 18px 0; }
+.leaderboard-controls label { flex: 1; min-width: 0; }
+.leaderboard-controls input, .leaderboard-controls select { display: block; width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: white; color: var(--text); }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; margin: 28px 0; }
+.podium-card { padding: 20px 10px; background: #f4f6f7; border: 1px solid #b8c2c9; border-radius: 16px; text-align: center; overflow-wrap: anywhere; box-shadow: var(--shadow-sm); }
+.podium-card.place-1 { background: #fff6da; border-color: #d4a536; padding-top: 35px; padding-bottom: 35px; }
+.podium-card.place-3 { background: #f9eee3; border-color: #bc8455; }
+.podium-medal { font-size: 2.5rem; color: #b18517; }
+.podium-card p { font-size: .85rem; margin-top: 8px; }
+#backToQueueBtn { margin-top: 20px; }
+@media (max-width: 480px) { .podium { gap: 6px; } .podium-card { padding: 15px 6px; } .podium-card h3 { font-size: .95rem; } .podium-card strong { font-size: .8rem; } .leaderboard-controls { flex-direction: column; } }
+.game-card { background: var(--primary); border-color: var(--primary-dark); }
+.game-card .game-number { color: white; }
+.game-card .team-card { background: white; }
+
+.open-scoring-btn { display: flex; justify-content: center; text-decoration: none; margin-bottom: 12px; }

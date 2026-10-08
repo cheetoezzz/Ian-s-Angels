@@ -28,6 +28,7 @@
         <!-- Navigation Tabs -->
         <nav class="tabs">
             <button class="tab-btn active" data-tab="queue">Queue</button>
+            <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
             <button class="tab-btn" data-tab="sessions">Sessions</button>
             <button class="tab-btn" data-tab="data">Data</button>
         </nav>
@@ -59,6 +60,8 @@
                 </div>
             </section>
 
+            <section class="section"><h2>Ready for Next Game</h2><div id="upcomingGameSection"></div></section>
+
             <!-- Waiting Players Section -->
             <section class="section">
                 <h2>Waiting Next</h2>
@@ -75,6 +78,8 @@
                 </div>
             </section>
         </div>
+
+        <div class="tab-content" id="leaderboard-tab"><section class="section"><h2>Leaderboard</h2><p>Live updates on this device. Rankings are not synchronized across phones.</p><div id="leaderboardSection"></div></section></div>
 
         <!-- Sessions Tab -->
         <div class="tab-content" id="sessions-tab">
@@ -165,6 +170,7 @@
         </div>
     </div>
 
+    <script src="scoring-engine.js"></script>
     <script src="app.js"></script>
     <script>
         // Register Service Worker

@@ -282,6 +282,125 @@ This is a simple, standalone application with no external dependencies. If you e
 - Ensure you're using a modern browser
 - Try clearing browser cache
 - Check browser console for errors (F12 → Console)
-#   I a n - s - A n g e l s  
- #   I a n - s - A n g e l s  
- 
+# Ian-s-Angels
+
+# Ian-s-Angels
+
+
+
+## Live rankings and prepared games
+
+Queue automatically prepares and saves the next lineup using the original rotation functions.
+Start Next Game waits until the current match is completed or cancelled. Enter valid scores
+(at least 11 points and a two-point lead), complete the match, then start the prepared lineup.
+Completion never starts the next match automatically. Regeneration and cancellation require
+confirmation. With four players, the preview reuses current players once the court is free.
+Previews project current players' next turn on a copy without updating actual statistics.
+Winner priority previews use the last completed result because the current winner is unknown.
+The prepared lineup remains stable after completion.
+
+View Live Leaderboard ranks by total points scored and supports search and sorting by points, point difference, wins, win percentage, and games played.
+Ranking ties compare point difference, wins, then player ID. Only completed games
+with valid scores count. Unscored legacy games stay in history and rotation counts without
+invented wins or losses. End Session requires confirmation and a free court, preserves players,
+and reveals a final podium and saved leaderboard snapshot. Use View Final Results in Sessions
+to revisit results. Rankings are local to this browser/device, without cloud synchronization.
+
+Schema version 2 keeps the `pickleball_queue_data` key and existing records, adding pendingGame,
+finalLeaderboard and cancelledGames. Older final snapshots are rebuilt from stored scores for points-based ranking. Legacy `current` states become `in_progress`. Existing
+backups remain importable and exports include the new fields. Prepared lineups survive reload
+and regenerate if a selected player is removed, inactive, or has `isAvailable: false`. Use the
+existing active toggle to mark players unavailable. Service worker cache v5 includes both logos.
+
+Run `node queue.test.cjs`, `node --check app.js`, and `node --check service-worker.js`.
+The regression suite uses a simulated DOM and storage, without additional dependencies.
+Serve on localhost or HTTPS to verify PWA installation and offline caching in a browser.
+
+
+Both queue modes guarantee a different teammate from each player's most recent match.
+This includes the current match when preparing the next lineup and saved partner history
+from previous sessions. Player selection retains its fairness priorities. Team assignment
+rejects repeated last partners, then prefers less frequent partnerships among legal pairings.
+Existing pending assignments are checked against this rule before starting. If the selected
+four have no legal pairing, no game starts and the queue explains how to change availability.
+Partners can repeat after intervening matches; with four players, only three pairings exist.
+
+## Dedicated scoring page
+
+Start a match in Queue, choose **Open Scoring**, and confirm which team serves first
+and each team's starting right-side player (facing the net). Choose a target of 11,
+15 or 21. The initial call is 0-0-2. Rotate the phone for the two-panel scoreboard.
+Tap the team that won the rally: only the serving team's rally win adds a point.
+Receiving-team wins advance the server or cause a side-out without adding points.
+
+`scoring-engine.js` contains immutable traditional doubles transitions, based on
+[USA Pickleball's 2026 rulebook](https://fliphtml5.com/cksih/USAP-Official-Rulebook/),
+sections 4-6. Each team has explicit starting identities and right/left positions.
+The same server changes sides after scoring; after a side-out, the player on the
+right is Server 1. Server numbers are assigned per service turn. The court graphic
+shows both sides facing the net and highlights the server and diagonal receiver.
+
+Undo restores one rally (or correction), including scores, positions and service.
+Edit / Correct requires reconciled scores, an explicit server and confirmed court
+positions. Corrections are marked and kept in the audit history. Reset requires
+confirmation and clears only the current match's scoring progress. Optional tap
+confirmation is available during setup and in the landscape information panel where space permits.
+A 350 ms input guard prevents rapid duplicate taps; undo is available for mistakes.
+
+At the target with a two-point lead, Game Over disables scoring and enables
+**Finish & Save Game**. Saving uses the existing completion function exactly once,
+updates points-based rankings and rotation, preserves the pending lineup, and returns
+to Queue. Choose **Start Next Game** explicitly. Once scoring is configured, Queue's
+manual score inputs are disabled so that scores and serving state stay consistent.
+The leaderboard includes only finalized games; the podium waits until End Session.
+
+Scoring is stored inside the existing game's optional `scoringState`: stable match
+and player IDs, initial configuration, target, scores, positions, serving team,
+server ID/number, history, revision, status and winner. No storage reset is required.
+Exports/imports retain these fields. Older active games with scores but no serving
+state require an explicit resume setup and retain their existing points. Old unscored
+records retain the existing history behavior. Web Locks serialize scoring actions
+where supported; revision checks reject stale tabs. Keep one organizer scoring a
+match at a time. This is same-browser storage, not synchronization across devices.
+
+The PWA manifest permits any orientation. Orientation/fullscreen requests may be
+blocked by the browser; the **Landscape** button retries with a user gesture.
+Portrait displays a rotation hint and retains working controls. Real device browser
+and OS support varies. The page works without locking or fullscreen permissions.
+Service worker cache v5 includes all scoring assets and handles match-ID query URLs
+offline. Serve from localhost or HTTPS and load once online before offline use.
+
+### Automated checks
+
+No packages or build tools are required:
+
+```sh
+node scoring-engine.test.cjs
+node queue.test.cjs
+node --check scoring-engine.js
+node --check scoring.js
+node --check app.js
+node --check service-worker.js
+```
+
+For the optional Chrome integration suite, use Node 22+ and start the local server
+in one terminal with `node browser-server.cjs`. Launch a separate Chrome test profile
+with `--headless=new --remote-debugging-port=9223 --user-data-dir=<temporary-test-folder>`,
+then run `node browser-scoring-check.cjs` in another terminal. The test attaches to
+that isolated profile, replaces its localhost test data, checks offline caching,
+writes `.scoring-landscape.png`, and closes that Chrome instance. Use a dedicated
+profile with no personal browsing state. Never point this test at a regular profile.
+
+The browser suite covers desktop 1440x900, landscape 844x390, 667x375 and 568x320,
+and portrait 390x844; no page scrolling or horizontal overflow was detected. It
+also tests setup, duplicate-tap protection, service changes, undo, corrections,
+refresh restoration, game-over guards, once-only completion, pending promotion,
+stale match links, offline query routing, legacy resume, and Back/Forward navigation.
+The pure engine suite covers the requested A-E examples, deuce, all target scores,
+full undo, correction validation, reset and a long deterministic rally sequence.
+
+Traditional side-out scoring is the only enabled mode. The pure engine exposes a
+mode field and rejects unsupported modes, so provisional rally scoring can be added
+separately later. Court diagrams show required serving/receiving positions, not
+players' unrestricted movement during a live rally. Very long names are shortened
+visually on compact panels while full names remain in the match record and titles.
