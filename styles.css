@@ -1627,9 +1627,7 @@ select:focus-visible,
 .podium-card p { font-size: .85rem; margin-top: 8px; }
 #backToQueueBtn { margin-top: 20px; }
 @media (max-width: 480px) { .podium { gap: 6px; } .podium-card { padding: 15px 6px; } .podium-card h3 { font-size: .95rem; } .podium-card strong { font-size: .8rem; } .leaderboard-controls { flex-direction: column; } }
-.game-card { background: var(--primary); border-color: var(--primary-dark); }
-.game-card .game-number { color: white; }
-.game-card .team-card { background: white; }
+
 
 .open-scoring-btn { display: flex; justify-content: center; text-decoration: none; margin-bottom: 12px; }
 
@@ -1643,3 +1641,12 @@ select:focus-visible,
 .dashboard-menu.tabs { position:absolute; top:calc(100% + 8px); left:0; right:0; display:flex; flex-direction:column; gap:4px; margin:0; padding:8px; border-radius:16px; background:white; border:1px solid var(--border); box-shadow:var(--shadow-md); }
 .dashboard-menu[hidden] { display:none; }
 .dashboard-menu .tab-btn { flex:none; width:100%; min-width:0; min-height:48px; padding:12px 16px; border-radius:10px; text-align:left; }
+
+/* Current Game only: lighter card hierarchy and distinct match actions. */
+#currentGameSection .game-card { background:#f0f8f2; border:1px solid #d6e8db; box-shadow:0 4px 16px rgba(15,81,50,.08); }
+#currentGameSection .game-number { color:#0f5132; margin-bottom:18px; }
+#currentGameSection .team-card { background:#fff; border-color:#d6e8db; box-shadow:0 2px 6px rgba(15,81,50,.04); }
+#currentGameSection .match-card { margin-bottom:20px; gap:16px; }
+#currentGameSection .open-scoring-btn { background:#187545; color:#fff; margin-bottom:12px; }
+#currentGameSection #completeGameBtn { background:#fff; color:#0f5132; border:1px solid #187545; }
+#currentGameSection #completeGameBtn:hover:not(:disabled) { background:#e5f4ea; }

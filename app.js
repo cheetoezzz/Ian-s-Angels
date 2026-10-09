@@ -159,6 +159,7 @@ function migrateGame(game) {
 
     return {
         ...game,
+        endingRule: game.endingRule || game.scoringState?.endingRule || 'standard',
         status: game.status === 'current' ? 'in_progress' : (game.status || (game.dateCompleted ? 'completed' : 'in_progress')),
         teamAScore,
         teamBScore,
@@ -669,9 +670,10 @@ function completeCurrentGame(options = null) {
             if (game.scoringState.matchId !== game.gameId || game.scoringState.status !== 'game_over') throw new Error('Finish the match on the scoring page before saving.');
             if (options?.expectedRevision !== undefined && game.scoringState.revision !== options.expectedRevision) throw new Error('Scoring changed in another tab. Review the latest score.');
             const {A, B} = game.scoringState.scores;
-            const validation = validatePickleballScore(A, B, game.scoringState.target);
+            const validation = validatePickleballScore(A, B, game.scoringState.target, game.scoringState.endingRule || 'standard');
             scoreResult = {success:validation.isValid, message:validation.message, teamAScore:A, teamBScore:B, winningTeam:validation.winningTeam, losingTeam:validation.losingTeam};
             game.targetScore = game.scoringState.target;
+            game.endingRule = game.scoringState.endingRule || 'standard';
         } catch (error) {
             showToast(error.message, 'error');
             return false;
@@ -767,7 +769,7 @@ function getScoreInputValues() {
     };
 }
 
-function validatePickleballScore(teamAScore, teamBScore, target = 11) {
+function validatePickleballScore(teamAScore, teamBScore, target = 11, endingRule = 'standard') {
     if (!Number.isFinite(teamAScore) || !Number.isFinite(teamBScore) || !Number.isInteger(teamAScore) || !Number.isInteger(teamBScore)) {
         return { isValid: false, message: 'Scores must be valid whole numbers.', winningTeam: null, losingTeam: null };
     }
@@ -788,7 +790,8 @@ function validatePickleballScore(teamAScore, teamBScore, target = 11) {
         return { isValid: false, message: `The winning team must score at least ${target} points.`, winningTeam: null, losingTeam: null };
     }
 
-    if (lead < 2) {
+    if (!['standard', 'golden_point'].includes(endingRule)) return {isValid:false, message:'Invalid game ending rule.'};
+    if (lead < (endingRule === 'golden_point' ? 1 : 2)) {
         return { isValid: false, message: 'A team must win by at least 2 points.', winningTeam: null, losingTeam: null };
     }
 
@@ -829,7 +832,7 @@ function applyGameToStats(playerStats, game) {
             stat.pointDifference = stat.pointsFor - stat.pointsAgainst;
         }
 
-        if (game.status !== 'cancelled' && Number.isFinite(game.teamAScore) && Number.isFinite(game.teamBScore) && validatePickleballScore(game.teamAScore, game.teamBScore, game.targetScore || game.scoringState?.target || 11).isValid) {
+        if (game.status !== 'cancelled' && Number.isFinite(game.teamAScore) && Number.isFinite(game.teamBScore) && validatePickleballScore(game.teamAScore, game.teamBScore, game.targetScore || game.scoringState?.target || 11, game.endingRule || game.scoringState?.endingRule || 'standard').isValid) {
             if (isWinner) {
                 stat.wins++;
                 stat.currentWinStreak++;
@@ -1591,7 +1594,7 @@ function getLeaderboard(session) {
     (session.games || []).forEach(game => {
         if (game.status !== 'completed') return;
         const a = normalizeScore(game.teamAScore), b = normalizeScore(game.teamBScore);
-        if (a === null || b === null || !validatePickleballScore(a, b, game.targetScore || game.scoringState?.target || 11).isValid) return;
+        if (a === null || b === null || !validatePickleballScore(a, b, game.targetScore || game.scoringState?.target || 11, game.endingRule || game.scoringState?.endingRule || 'standard').isValid) return;
         const ids = [...game.teamA, ...game.teamB].map(p => p.id);
         if (game.teamA.length !== 2 || game.teamB.length !== 2 || new Set(ids).size !== 4) return;
         [...game.teamA, ...game.teamB].forEach(player => {

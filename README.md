@@ -310,7 +310,7 @@ Schema version 2 keeps the `pickleball_queue_data` key and existing records, add
 finalLeaderboard and cancelledGames. Older final snapshots are rebuilt from stored scores for points-based ranking. Legacy `current` states become `in_progress`. Existing
 backups remain importable and exports include the new fields. Prepared lineups survive reload
 and regenerate if a selected player is removed, inactive, or has `isAvailable: false`. Use the
-existing active toggle to mark players unavailable. Service worker cache v6 includes both logos.
+existing active toggle to mark players unavailable. Service worker cache v7 includes both logos.
 
 Run `node queue.test.cjs`, `node --check app.js`, and `node --check service-worker.js`.
 The regression suite uses a simulated DOM and storage, without additional dependencies.
@@ -343,9 +343,7 @@ shows both sides facing the net and highlights the server and diagonal receiver.
 Undo restores one rally (or correction), including scores, positions and service.
 Edit / Correct requires reconciled scores, an explicit server and confirmed court
 positions. Corrections are marked and kept in the audit history. Reset requires
-confirmation and clears only the current match's scoring progress. Optional tap
-confirmation is available during setup and in the landscape information panel where space permits.
-A 350 ms input guard prevents rapid duplicate taps; undo is available for mistakes.
+confirmation and clears only the current match's scoring progress. A 350 ms input guard prevents rapid duplicate taps; undo is available for mistakes.
 
 At the target with a two-point lead, Game Over disables scoring and enables
 **Finish & Save Game**. Saving uses the existing completion function exactly once,
@@ -367,7 +365,7 @@ The PWA manifest permits any orientation. Orientation/fullscreen requests may be
 blocked by the browser; the **Landscape** button retries with a user gesture.
 Portrait displays a rotation hint and retains working controls. Real device browser
 and OS support varies. The page works without locking or fullscreen permissions.
-Service worker cache v6 includes all scoring assets and handles match-ID query URLs
+Service worker cache v7 includes all scoring assets and handles match-ID query URLs
 offline. Serve from localhost or HTTPS and load once online before offline use.
 
 ### Automated checks
@@ -406,3 +404,35 @@ players' unrestricted movement during a live rally. Very long names are shortene
 visually on compact panels while full names remain in the match record and titles.
 
 Dashboard views are available from the burger Menu button. The menu shows Queue, Leaderboard, Sessions and Data vertically, marks the current view, and closes after selection, an outside click, focus leaving the menu, or Escape.
+
+
+## Game ending rules and simplified scoring
+
+The Current Game dashboard card uses a light green background with white team cards,
+dark green headings, a primary Open Scoring button, outlined Complete Game, and a red
+cancel button. These styles apply only to Current Game.
+
+Scoring setup offers **Game Ending Rule**, separate from traditional side-out scoring:
+**Standard — Win by 2** is the default; **Sudden Death — Golden Point, Win by 1** is
+optional. At 10-10 (target 11), 14-14 (15), or 20-20 (21), Golden Point displays a gold
+Next Point Wins indicator. Only a legally scored serving-team point ends the game.
+Receiving-team rally wins still change servers or cause a side-out without points.
+Undo remains available after a winning point until the match is finalized.
+
+The ending rule may be changed on the scoreboard before scoring begins. Once a rally
+has been recorded, the rule stays locked, even after Undo; explicitly Reset Match to
+unlock it. Corrections with recorded progress also lock the rule. Reset retains the
+selected rule until the organizer changes it. Scores and serving state continue to
+persist without altering queue rotation or pending assignments.
+
+The former information panel and tap-confirmation preference have been removed from
+the scoring UI. Scoring always uses one tap per rally with the existing duplicate-tap
+guard. Server information, the court diagram and undo controls remain visible.
+
+The selected `endingRule` (`standard` or `golden_point`) is saved with the match and
+its `scoringState`/initial configuration. Backups preserve it. Missing rules default
+to Standard, without changing old scores or session records. Finalization, statistics
+and the points leaderboard validate Golden Point results against the saved rule.
+The service worker cache is v7. Tests cover all three Golden Point targets, service
+changes, winning undo, rule locking, persistence, once-only finalization, and both
+standard and Golden Point layouts at mobile viewport sizes.

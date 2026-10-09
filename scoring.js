@@ -55,8 +55,11 @@ function renderScoring() {
     }
     scoringView.revision = state.revision;
     const info = ScoringEngine.servingInfo(state);
+    const golden = ScoringEngine.suddenDeathActive(state);
+    const rule = state.endingRule || 'standard';
+    const ruleLocked = state.hasRecordedRally || state.history.length > 0 || state.scores.A > 0 || state.scores.B > 0;
     const over = state.status === 'game_over';
-    content.innerHTML = `<div class="scoreboard">${['A','B'].map(team => `<button type="button" class="team-panel ${state.servingTeam === team ? 'serving' : ''}" id="rally${team}" ${over ? 'disabled' : ''} aria-label="Team ${team} won the rally. Score ${state.scores[team]}.">
+    content.innerHTML = `<div class="ending-rule-bar"><label>Ending rule <select id="liveEndingRule" ${ruleLocked ? 'disabled' : ''}><option value="standard">Standard — Win by 2</option><option value="golden_point">Sudden Death — Golden Point</option></select></label><strong class="golden-point-indicator" ${golden ? '' : 'hidden'} role="status">SUDDEN DEATH — NEXT POINT WINS</strong></div><div class="scoreboard ${golden ? 'golden-point-active' : ''}">${['A','B'].map(team => `<button type="button" class="team-panel ${state.servingTeam === team ? 'serving' : ''}" id="rally${team}" ${over ? 'disabled' : ''} aria-label="Team ${team} won the rally. Score ${state.scores[team]}.">
         <div><div class="team-label">TEAM ${team} ${state.servingTeam === team ? '<span class="serving-pill">SERVING</span>' : ''}</div>
         ${(team === 'A' ? game.teamA : game.teamB).map(p=>`<span title="${escapeHtml(p.name)}" class="player-line ${p.id === state.serverId ? 'current-server' : ''}">${p.id === state.serverId ? '● ' : ''}${escapeHtml(p.name)}</span>`).join('')}</div>
         <span class="score">${state.scores[team]}</span><span class="tap-label">${over ? (state.winner === team ? '✓ Winning team' : 'Game over') : `TAP if Team ${team} wins rally`}</span>
@@ -66,14 +69,14 @@ function renderScoring() {
         <span>Team ${info.team} · Server ${info.serverNumber} · ${info.side === 'right' ? 'Right' : 'Left'} Court</span>
         <span class="score-call" aria-live="polite">${info.scoreCall}</span><span>${state.manuallyCorrected ? 'Manually corrected · ' : ''}${state.history.filter(e=>e.type === 'rally').length} rallies recorded</span></div>
         <div class="court-wrap"><span class="court-caption">COURT FROM ABOVE · SIDES FACE THE NET</span><div class="court">${courtPlayers(game,state,info)}</div></div>
-        <div class="key-info"><strong>${over ? 'Save to update the queue and rankings.' : 'Only the serving team scores.'}</strong><span>${over ? 'The next game starts only when the organizer chooses.' : 'The server continues until their team loses the rally.'}</span>
-        <label class="checkbox-label"><input id="liveConfirmRallies" type="checkbox" ${state.confirmRallies ? 'checked' : ''}> Confirm taps</label></div></div>`;
+        </div>`;
+    $score('liveEndingRule').value = rule;
+    $score('liveEndingRule').onchange = e => { const selectedRule = e.target.value; mutateScoring(s=>ScoringEngine.setEndingRule(s,selectedRule)); };
     for (const team of ['A','B']) $score(`rally${team}`).onclick = () => recordRally(team);
-    $score('liveConfirmRallies').onchange = e => mutateScoring(s => ({...s, confirmRallies:e.target.checked, revision:s.revision+1}));
     $score('undoBtn').disabled = !state.history.length;
     $score('undoBtn').textContent = state.history.at(-1)?.type === 'correction' ? '↶ Undo Correction' : '↶ Undo Last Rally';
     $score('finishBtn').disabled = !over;
-    $score('scoringNote').textContent = `${state.manuallyCorrected ? 'Manually corrected · ' : ''}Traditional doubles · First to ${state.target}, win by two · ${over ? 'Finish & Save unlocks Start Next Game in Queue' : 'Progress saved on this device'}`;
+    $score('scoringNote').textContent = `${state.manuallyCorrected ? 'Manually corrected · ' : ''}Traditional doubles · First to ${state.target} · ${rule === 'golden_point' ? 'Golden Point, win by 1' : 'Standard, win by 2'} · ${over ? 'Finish & Save unlocks Start Next Game in Queue' : 'Progress saved on this device'}`;
 }
 function courtPlayers(game,state,info) {
     // Team A faces right: its right court is bottom. Team B faces left: right is top.
@@ -85,6 +88,7 @@ function courtPlayers(game,state,info) {
     }).join('');
 }
 function openStartingSetup(game) {
+    $score('endingRule').value = game.endingRule || 'standard';
     $score('startingRightA').innerHTML = playerOptions(game.teamA);
     $score('startingRightB').innerHTML = playerOptions(game.teamB);
     $score('setupError').textContent = '';
@@ -122,6 +126,7 @@ async function mutateScoring(change) {
             game.teamAScore = next.scores.A;
             game.teamBScore = next.scores.B;
             game.targetScore = next.target;
+            game.endingRule = next.endingRule || 'standard';
             if (!saveData(data)) throw new Error('Unable to save. Free browser storage and retry.');
             $score('saveStatus').textContent = 'Saved locally';
             renderScoring();
@@ -137,7 +142,6 @@ async function recordRally(team) {
     const time = performance.now();
     if (time - scoringView.lastTap < 350 || scoringView.busy || !scoringView.state || scoringView.state.status !== 'in_progress') return;
     scoringView.lastTap = time;
-    if (scoringView.state.confirmRallies && !confirm(`Team ${team} won this rally?`)) return;
     if (await mutateScoring(s => ScoringEngine.rally(s,team))) $score(`rally${team}`)?.classList.add('rally-flash');
 }
 function openCorrection() {
@@ -162,13 +166,12 @@ $score('setupForm').onsubmit = async event => {
     scoringView.revision = undefined;
     const success = await mutateScoring((state,game) => {
         if (state) throw new Error('Scoring is already initialized.');
-        let next = ScoringEngine.create(game,{firstServingTeam:$score('firstServingTeam').value, startingRight:{A:$score('startingRightA').value,B:$score('startingRightB').value}, target:Number($score('targetScore').value)});
+        let next = ScoringEngine.create(game,{firstServingTeam:$score('firstServingTeam').value, startingRight:{A:$score('startingRightA').value,B:$score('startingRightB').value}, target:Number($score('targetScore').value), endingRule:$score('endingRule').value});
         if (Number(game.teamAScore) > 0 || Number(game.teamBScore) > 0) {
             if (!$score('resumeConfirmed').checked) throw new Error('Confirm existing positions before resuming.');
             const scores = {A:Number(game.teamAScore ?? 0),B:Number(game.teamBScore ?? 0)};
             next = ScoringEngine.correct(next,{scores,positions:ScoringEngine.positionsFor(next.teams,next.initialConfig.startingRight,scores),servingTeam:$score('resumeTeam').value,serverId:$score('resumePlayer').value,serverNumber:Number($score('resumeNumber').value)});
         }
-        next.confirmRallies = $score('confirmRallies').checked;
         return next;
     });
     if (success) { $score('setupDialog').close(); requestLandscape(); }
@@ -197,7 +200,7 @@ $score('closeCorrectionBtn').onclick = () => $score('correctionDialog').close();
 $score('undoBtn').onclick = () => mutateScoring(s=>ScoringEngine.undo(s));
 $score('correctBtn').onclick = openCorrection;
 $score('resetMatchBtn').onclick = () => {
-    if (confirm('Reset this match to 0-0-2 with the original starting positions? Recorded rallies and corrections for this match will be cleared.')) mutateScoring(s=>({...ScoringEngine.reset(s),confirmRallies:s.confirmRallies}));
+    if (confirm('Reset this match to 0-0-2 with the original starting positions? Recorded rallies and corrections for this match will be cleared.')) mutateScoring(s=>ScoringEngine.reset(s));
 };
 $score('finishBtn').onclick = async () => {
     if (scoringView.busy || scoringView.state?.status !== 'game_over') return;

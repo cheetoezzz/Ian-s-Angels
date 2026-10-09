@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 const assert = require('node:assert/strict');
 const E = require('./scoring-engine.js');
 const game = {gameId:'engine-test',teamA:[{id:'a0'},{id:'a1'}],teamB:[{id:'b0'},{id:'b1'}]};
@@ -57,9 +57,42 @@ for (let i=0;i<240;i++) {
  n=E.rally(s,winner); E.validate(n);
  if(winner===s.servingTeam) {assert.equal(n.scores[winner],s.scores[winner]+1);assert.equal(n.serverId,s.serverId);}
  else {assert.deepEqual(n.scores,s.scores);}
- const undone=E.undo(n); const {revision:r1,...old}=s; const {revision:r2,...restored}=undone;
+ const undone=E.undo(n); const {revision:r1,hasRecordedRally:h1,...old}=s; const {revision:r2,hasRecordedRally:h2,...restored}=undone;
  assert.deepEqual(restored,old,'undo complete state'); assert.equal(JSON.stringify(s),before,'no input mutation');
  s=n;
 }
 assert.ok(s.history.length>40,'long sequence exercises many service turns');
 console.log('PASS: scenarios A-E, explicit starting identities, diagonal receiver, two-server turns, parity, immutable updates, game-over guards, 11/15/21 targets, deuce, full undo, corrections, reset and long rally sequence');
+for (const target of [11,15,21]) {
+    let golden=E.create(game,{...config,target,endingRule:'golden_point'});
+    const tied={A:target-1,B:target-1};
+    golden=E.correct(golden,{scores:tied,positions:E.positionsFor(golden.teams,golden.initialConfig.startingRight,tied),servingTeam:'A',serverId:'a1',serverNumber:1});
+    assert.equal(E.suddenDeathActive(golden),true);
+    let receivingWin=E.rally(golden,'B');
+    assert.deepEqual(receivingWin.scores,tied,'receiving winner earns no point');
+    assert.equal(receivingWin.serverNumber,2);
+    assert.equal(E.suddenDeathActive(receivingWin),true);
+    receivingWin=E.rally(receivingWin,'B');
+    assert.equal(receivingWin.servingTeam,'B');assert.equal(receivingWin.serverNumber,1);
+    assert.deepEqual(receivingWin.scores,tied);
+    const won=E.rally(receivingWin,'B');
+    assert.equal(won.scores.B,target);assert.equal(won.scores.A,target-1);
+    assert.equal(won.status,'game_over');assert.equal(won.winner,'B');
+    assert.equal(E.suddenDeathActive(won),false);
+    assert.strictEqual(E.rally(won,'A'),won);
+    const undoWon=E.undo(won);
+    assert.equal(undoWon.status,'in_progress');assert.equal(undoWon.winner,null);
+    assert.deepEqual(undoWon.positions,receivingWin.positions);
+    assert.deepEqual(undoWon.scores,tied);
+    assert.equal(E.suddenDeathActive(undoWon),true);
+    const reloaded=JSON.parse(JSON.stringify(undoWon));E.validate(reloaded);
+    assert.equal(reloaded.endingRule,'golden_point');
+    assert.throws(()=>E.setEndingRule(reloaded,'standard'));
+}
+s=E.create(game,config); assert.equal(s.endingRule,'standard');assert.equal(E.suddenDeathActive(atScore(10,10)),false);
+n=E.setEndingRule(s,'golden_point');assert.equal(n.initialConfig.endingRule,'golden_point');
+n=E.rally(n,'A');n=E.undo(n);assert.throws(()=>E.setEndingRule(n,'standard'),'undo does not unlock rule');
+n=E.reset(n);assert.equal(E.setEndingRule(n,'standard').endingRule,'standard','explicit reset unlocks rule');
+const legacy=E.create(game,config);delete legacy.endingRule;delete legacy.initialConfig.endingRule;E.validate(legacy);
+assert.equal(E.rally(atScore(10,10),'A').status,'in_progress','standard 11-10 unfinished');
+console.log('PASS: Golden Point targets 11/15/21, receiving wins, second server and side-outs, winning undo, reload, Standard fallback and ending-rule lock until reset');

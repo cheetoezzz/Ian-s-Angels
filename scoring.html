@@ -30,7 +30,7 @@
             <button id="resetMatchBtn" type="button">Reset Match</button>
             <button id="finishBtn" class="primary" type="button" disabled>✓ Finish &amp; Save Game</button>
         </footer>
-        <div class="scoring-note" id="scoringNote">Only the serving team scores · Traditional doubles · First to 11, win by two</div>
+        <div class="scoring-note" id="scoringNote">Traditional doubles · First to 11 · Standard — Win by 2</div>
     </main>
     <dialog id="setupDialog" aria-labelledby="setupTitle">
         <form id="setupForm">
@@ -38,6 +38,7 @@
             <p>Choose the players on the right side as they face the net. No server is inferred from team order.</p>
             <div class="form-grid">
                 <label>First serving team<select id="firstServingTeam" required><option value="">Choose a team</option><option value="A">Team A</option><option value="B">Team B</option></select></label>
+                <label>Game Ending Rule<select id="endingRule"><option value="standard">Standard — Win by 2 (Default)</option><option value="golden_point">Sudden Death — Golden Point, Win by 1</option></select></label>
                 <label>Target score<select id="targetScore"><option>11</option><option>15</option><option>21</option></select></label>
                 <label>Team A starting right player<select id="startingRightA" required></select></label>
                 <label>Team B starting right player<select id="startingRightB" required></select></label>
@@ -51,7 +52,6 @@
                     <label class="checkbox-label"><input id="resumeConfirmed" type="checkbox" disabled required> Starting identities and score-based court positions confirmed</label>
                 </div>
             </section>
-            <label class="checkbox-label"><input id="confirmRallies" type="checkbox"> Confirm each rally (optional)</label>
             <p id="setupError" class="error" role="alert"></p>
             <div class="dialog-actions"><a href="index.html">Back to Queue</a><button class="primary" type="submit">Start Scoring · 0 - 0 - 2</button></div>
         </form>
