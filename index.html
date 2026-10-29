@@ -2,102 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f5132">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Pickleball Queue</title>
+    <title>Ian&#8217;s Angels &middot; Queue &amp; Scoring</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="images/ian.png">
     <link rel="icon" href="images/ian.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <a class="skip-link" href="#mainContent">Skip to content</a>
     <div class="app">
-        <!-- Header -->
         <header class="header">
-            <div class="header-brand">
-                <img src="images/ian.png" alt="Logo" class="header-logo">
-                <div class="header-copy">
-                    <h1>Ian's Angels</h1>
-                    <p class="subtitle">Fair one-court player rotation</p>
-                </div>
-            </div>
+            <a href="#queue" class="header-brand" aria-label="Ian's Angels Queue">
+                <img src="images/ian.png" alt="Ian's Angels logo" class="header-logo">
+                <div class="header-copy"><h1>Ian&#8217;s Angels</h1><p class="subtitle">Fair one-court player rotation</p></div>
+            </a>
+            <button id="navigationToggle" class="header-menu" type="button" aria-label="Open data tools" aria-expanded="false" aria-controls="utilityMenu"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            <div id="utilityMenu" class="utility-menu" hidden><button class="tab-btn" type="button" data-tab="data"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 16v5h16v-5"/></svg><span>Data &amp; backups</span></button></div>
+            <p class="brand-motto">Play. Rotate.<br>Keep it Fair.<span>Pickleball for everyone.</span></p>
         </header>
-
-        <!-- Dashboard navigation -->
-        <div class="dashboard-navigation">
-            <button id="navigationToggle" class="navigation-toggle" type="button" aria-expanded="false" aria-controls="dashboardMenu">
-                <span id="currentViewLabel">Queue</span>
-                <span class="navigation-toggle-label">Menu <span class="burger-icon" aria-hidden="true"><span></span><span></span><span></span></span></span>
-            </button>
-            <nav id="dashboardMenu" class="tabs dashboard-menu" aria-label="Dashboard navigation" hidden>
-                <button class="tab-btn active" type="button" data-tab="queue" aria-current="page">Queue</button>
-                <button class="tab-btn" type="button" data-tab="leaderboard">Leaderboard</button>
-                <button class="tab-btn" type="button" data-tab="sessions">Sessions</button>
-                <button class="tab-btn" type="button" data-tab="data">Data</button>
-            </nav>
-        </div>
-
-        <!-- Queue Tab -->
-        <div class="tab-content active" id="queue-tab">
-            <!-- Add Player Section -->
-            <section class="section">
-                <h2>Add Player</h2>
-                <div class="add-player-form">
-                    <input type="text" id="playerNameInput" placeholder="Enter player name" maxlength="50">
-                    <button id="addPlayerBtn" class="btn btn-primary">Add Player</button>
-                </div>
-            </section>
-
-            <!-- Session Section -->
-            <section class="section">
-                <h2>Active Session</h2>
-                <div id="sessionSection">
-                    <!-- Dynamic content -->
-                </div>
-            </section>
-
-            <!-- Current Game Section -->
-            <section class="section">
-                <h2>Current Game</h2>
-                <div id="currentGameSection">
-                    <!-- Dynamic content -->
-                </div>
-            </section>
-
-            <section class="section"><h2>Ready for Next Game</h2><div id="upcomingGameSection"></div></section>
-
-            <!-- Waiting Players Section -->
-            <section class="section">
-                <h2>Waiting Next</h2>
-                <div id="waitingPlayersSection">
-                    <!-- Dynamic content -->
-                </div>
-            </section>
-
-            <!-- Player List Section -->
-            <section class="section">
-                <h2>All Players</h2>
-                <div id="playerListSection">
-                    <!-- Dynamic content -->
-                </div>
-            </section>
-        </div>
-
-        <div class="tab-content" id="leaderboard-tab"><section class="section"><h2>Leaderboard</h2><p>Live updates on this device. Rankings are not synchronized across phones.</p><div id="leaderboardSection"></div></section></div>
-
-        <!-- Sessions Tab -->
-        <div class="tab-content" id="sessions-tab">
-            <section class="section">
-                <h2>Past Sessions</h2>
-                <div id="pastSessionsSection">
-                    <!-- Dynamic content -->
-                </div>
-            </section>
-        </div>
-
-        <!-- Data Tab -->
+        <nav id="dashboardMenu" class="dashboard-menu" aria-label="Main navigation"><button class="tab-btn active" type="button" data-tab="queue" aria-current="page"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="3"/><circle cx="17" cy="8" r="2"/><path d="M2 21v-3a6 6 0 0 1 12 0v3M16 14a5 5 0 0 1 6 5v2"/></svg><span>Queue</span></button><button class="tab-btn " type="button" data-tab="scoring" ><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 3v18M6 8h3M15 16h3M16.5 14.5v3"/></svg><span>Scoring</span></button><button class="tab-btn " type="button" data-tab="leaderboard" ><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V11h4v10M10 21V3h4v18M16 21v-7h4v7"/></svg><span>Leaderboard</span></button><button class="tab-btn " type="button" data-tab="sessions" ><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2"/></svg><span>Sessions</span></button><button class="tab-btn " type="button" data-tab="players" ><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2M18 5h5M20.5 2.5v5"/></svg><span>Players</span></button></nav>
+        <main id="mainContent" tabindex="-1">
+            <div class="workspace-heading"><div><p class="eyebrow">IAN&#8217;S ANGELS &middot; ONE COURT, EVERYONE PLAYS</p><h2 id="currentViewLabel">Queue</h2><p id="viewDescription">Your court. Your crew. The next great game.</p></div><a class="workspace-tools" href="#data"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 16v5h16v-5"/></svg><span>Data &amp; backups</span></a></div>
+            <div class="tab-content active" id="queue-tab">
+                <section class="section session-card-section"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2"/></svg>Active Session</h2><div id="sessionSection"></div></section>
+                <div class="dashboard-column queue-primary"><div id="queueAddSlot"><section class="section add-card"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2M18 5h5M20.5 2.5v5"/></svg>Add Player</h2><div class="add-player-form"><label class="sr-only" for="playerNameInput">Player name</label><input type="text" id="playerNameInput" placeholder="Enter player name" maxlength="50" autocomplete="off"><button id="addPlayerBtn" class="btn btn-primary">Add Player</button></div></section></div><section class="section current-card"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="2" width="18" height="20" rx="2"/><path d="M3 12h18M3 8h18M3 16h18M12 2v6M12 16v6"/></svg>Current Game</h2><div id="currentGameSection"></div></section></div>
+                <div class="dashboard-column queue-secondary"><section class="section upcoming-card-section"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="3"/><circle cx="17" cy="8" r="2"/><path d="M2 21v-3a6 6 0 0 1 12 0v3M16 14a5 5 0 0 1 6 5v2"/></svg>Ready for Next Game</h2><div id="upcomingGameSection"></div></section><section class="section waiting-card"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Waiting Next</h2><div id="waitingPlayersSection"></div></section></div>
+                <div class="dashboard-column queue-tertiary"><section class="section preview-card"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V11h4v10M10 21V3h4v18M16 21v-7h4v7"/></svg>Live Leaderboard</h2><div class="section-caption">Current session <a href="#leaderboard">View all &rarr;</a></div><div id="leaderboardPreview"></div></section><div id="queuePlayersSlot"><section class="section players-card"><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="3"/><circle cx="17" cy="8" r="2"/><path d="M2 21v-3a6 6 0 0 1 12 0v3M16 14a5 5 0 0 1 6 5v2"/></svg>All Players</h2><div id="playerListSection"></div></section></div></div>
+            </div>
+            <div class="tab-content" id="leaderboard-tab"><section class="section"><div id="leaderboardSection"></div></section><p class="device-note">Saved on this device &middot; Rankings are not synchronized across phones.</p></div>
+            <div class="tab-content" id="sessions-tab"><section class="section "><h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2"/></svg>Session History</h2><div id="pastSessionsSection"></div></section></div>
+            <div class="tab-content" id="players-tab"><div id="playersWorkspace"></div></div>
+                    <!-- Data Tab -->
         <div class="tab-content" id="data-tab">
             <section class="section">
                 <h2>Data Tools</h2>
@@ -135,8 +74,10 @@
             </section>
         </div>
 
+
+        </main>
         <!-- Toast Notification -->
-        <div id="toast" class="toast"></div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
         <!-- Queue Mode Modal -->
         <div id="queueModeModal" class="modal-overlay" aria-hidden="true">
@@ -171,7 +112,7 @@
         </div>
         
         <!-- Session Animation -->
-        <div id="sessionAnimation" class="session-animation">
+        <div id="sessionAnimation" class="session-animation" aria-hidden="true">
             <img src="images/ian2.png" alt="Logo" class="session-animation-logo">
         </div>
     </div>

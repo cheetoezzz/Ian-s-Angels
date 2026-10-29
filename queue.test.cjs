@@ -101,12 +101,12 @@ assert.equal(run('isPendingValid(d)'),false,'old repeating preview invalidated')
 console.log('PASS: both modes change partners across 12 matches, ongoing-match previews, cross-session history, impossible pairing guard, legacy preview invalidation');
 ctx.ScoringEngine = require('./scoring-engine.js');
 run(`d=fixture(4); saveData(d); generateNextGame(); d=loadData(); let match=d.activeSession.currentGame; let scoring=ScoringEngine.create(match,{firstServingTeam:'A',startingRight:{A:match.teamA[1].id,B:match.teamB[1].id},target:15}); scoring=ScoringEngine.correct(scoring,{scores:{A:14,B:13},positions:ScoringEngine.positionsFor(scoring.teams,scoring.initialConfig.startingRight,{A:14,B:13}),servingTeam:'A',serverId:match.teamA[1].id,serverNumber:1}); match.scoringState=scoring; saveData(d);`);
-assert.equal(run('completeCurrentGame()'),false,'configured 15-point game cannot finish at 14');
+assert.equal(run('completeCurrentGame({expectedGameId:loadData().activeSession?.currentGame?.gameId})'),false,'configured 15-point game cannot finish at 14');
 run(`d=loadData(); match=d.activeSession.currentGame; match.scoringState=ScoringEngine.rally(match.scoringState,'A'); saveData(d);`);
 assert.equal(run(`completeCurrentGame({expectedGameId:'stale'})`),false,'stale scoring page cannot finalize');
 assert.equal(run(`completeCurrentGame({expectedRevision:-1})`),false,'stale revision cannot finalize');
-assert.equal(run('completeCurrentGame()'),true,'save engine game via common completion');
-assert.equal(run('completeCurrentGame()'),false,'no duplicate finalized records');
+assert.equal(run('completeCurrentGame({expectedGameId:loadData().activeSession?.currentGame?.gameId})'),true,'save engine game via common completion');
+assert.equal(run('completeCurrentGame({expectedGameId:loadData().activeSession?.currentGame?.gameId})'),false,'no duplicate finalized records');
 assert.equal(run('loadData().activeSession.games[0].teamAScore'),15);
 assert.equal(run('loadData().activeSession.games[0].targetScore'),15);
 assert.equal(run('getLeaderboard(loadData().activeSession)[0].pointsFor'),15);
@@ -114,8 +114,8 @@ assert.equal(run('loadData().players.reduce((n,p)=>n+p.gamesPlayed,0)'),4);
 assert.equal(run('loadData().activeSession.games[0].scoringState.history.length'),2,'rally and correction audit retained');
 console.log('PASS: shared scoring completion, 15-point target, stale match/revision guards, statistics and history preservation');
 run(`d=fixture(4); saveData(d); generateNextGame(); d=loadData(); match=d.activeSession.currentGame; scoring=ScoringEngine.create(match,{firstServingTeam:'A',startingRight:{A:match.teamA[0].id,B:match.teamB[0].id},target:11,endingRule:'golden_point'});scoring=ScoringEngine.correct(scoring,{scores:{A:10,B:10},positions:ScoringEngine.positionsFor(scoring.teams,scoring.initialConfig.startingRight,{A:10,B:10}),servingTeam:'A',serverId:match.teamA[0].id,serverNumber:2});match.scoringState=ScoringEngine.rally(scoring,'A');saveData(d);`);
-assert.equal(run('completeCurrentGame()'),true,'Golden Point finalizes at 11-10');
-assert.equal(run('completeCurrentGame()'),false);
+assert.equal(run('completeCurrentGame({expectedGameId:loadData().activeSession?.currentGame?.gameId})'),true,'Golden Point finalizes at 11-10');
+assert.equal(run('completeCurrentGame({expectedGameId:loadData().activeSession?.currentGame?.gameId})'),false);
 assert.equal(run('loadData().activeSession.games[0].endingRule'),'golden_point');
 assert.equal(run('getLeaderboard(loadData().activeSession)[0].pointsFor'),11);
 assert.equal(run('Object.values(loadData().activeSession.playerStats).reduce((n,s)=>n+s.wins,0)'),2);
@@ -125,3 +125,59 @@ assert.equal(run('validatePickleballScore(11,10,11,"golden_point").isValid'),tru
 assert.equal(run('loadData().players.reduce((n,p)=>n+p.gamesPlayed,0)'),4);
 assert.equal(run('migrateData(JSON.parse(JSON.stringify(loadData()))).activeSession.games[0].endingRule'),'golden_point','backup retains ending rule');
 console.log('PASS: Golden Point completion, points leaderboard, win/loss statistics, duplicate guard, old game fallback and backup persistence');
+
+for (const target of [11,15,21]) {
+ for (const reverse of [false,true]) {
+  for (const [a,b,standard,golden] of [[target,target-2,true,true],[target,target-1,false,true],[target+1,target-1,true,false],[target+2,target,true,false],[target-1,target-1,false,false],[target-1,target-3,false,false],[target+2,0,false,false]]) {
+   const scores=reverse?[b,a]:[a,b];
+   for (const [rule,expected] of [['standard',standard],['golden_point',golden]]) assert.equal(run(`validatePickleballScore(${scores[0]},${scores[1]},${target},'${rule}').isValid`),expected,`${target} ${scores} ${rule}`);
+  }
+ }
+}
+for (const value of ['', '-1', '1.5', '1e1', 'Infinity']) {
+ element('teamAScoreInput').value=value; element('teamBScoreInput').value='0';
+ assert.equal(run('getScoreInputValues().success'),false);
+}
+run(`d=fixture(4); d.activeSession.endingRule='golden_point'; d.activeSession.targetScore=15; saveData(d); generateNextGame();`);
+assert.equal(run('loadData().activeSession.currentGame.endingRule'),'golden_point');
+element('teamAScoreInput').value='15'; element('teamBScoreInput').value='14';
+ctx.confirm=()=>false;
+assert.equal(run('completeCurrentGame()'),false,'cancel confirmation preserves match');
+ctx.confirm=()=>true;
+assert.equal(run('completeCurrentGame()'),true);
+assert.equal(run('loadData().activeSession.games[0].resultSource'),'manual');
+assert.ok(!run('loadData().activeSession.games[0].scoringState'));
+run(`d=fixture(4); saveData(d); generateNextGame(); d=loadData(); match=d.activeSession.currentGame; match.scoringState=ScoringEngine.rally(ScoringEngine.create(match,{firstServingTeam:'A',startingRight:{A:match.teamA[0].id,B:match.teamB[0].id},target:11}),'A'); saveData(d);`);
+element('teamAScoreInput').value='11'; element('teamBScoreInput').value='9';
+assert.equal(run('completeCurrentGame()'),true,'explicit override of rally state');
+assert.equal(run('loadData().activeSession.games[0].scoringAudit[0].scoringState.history.length'),1);
+assert.ok(!run('loadData().activeSession.games[0].scoringState'));
+assert.equal(run('completeCurrentGame()'),false);
+run(`d=fixture(4); saveData(d); generateNextGame();`);
+ctx.confirm=()=>{run(`d=loadData(); d.activeSession.currentGame.endingRule='golden_point'; saveData(d);`);return true;};
+assert.equal(run('completeCurrentGame()'),false,'reject changes during confirmation');
+ctx.confirm=()=>true;
+console.log('PASS: final-score matrix for both winners at 11/15/21, invalid input, session defaults, confirmation cancellation, manual result, rally audit override, duplicate and stale-match guards');
+
+run('renderCurrentGame(loadData())');
+assert.ok(!element('currentGameSection').innerHTML.includes('Golden Point Enabled'));
+assert.ok(!element('currentGameSection').innerHTML.includes('name="queueEndingRule"'));
+assert.ok(!element('currentGameSection').innerHTML.includes('id="completeGameBtn" class="btn btn-success" disabled'));
+assert.equal(run('validatePickleballScore(14,0,11,"standard").isValid'),false);
+assert.equal(run('validatePickleballScore(14,0,11,"standard",true).isValid'),true,'historical results preserved');
+console.log('PASS: Queue controls and historical result compatibility');
+for (const rule of ['standard','golden_point']) {
+ for (const [a,b] of [[0,0],[10,10],[3,2],[11,10],[12,10],[123,1],[1,123]]) {
+  run(`d=fixture(4); d.activeSession.endingRule='${rule}'; saveData(d); generateNextGame();`);
+  element('teamAScoreInput').value=String(a); element('teamBScoreInput').value=String(b);
+  assert.equal(run('completeCurrentGame()'),true,`${rule}: ${a}-${b} completes`);
+  assert.equal(run('getLeaderboard(loadData().activeSession).length'),4);
+  assert.equal(run('getLeaderboard(loadData().activeSession).reduce((n,p)=>n+p.pointsFor,0)'),2*(a+b));
+  assert.equal(run('Object.values(loadData().activeSession.playerStats).reduce((n,p)=>n+p.wins,0)'),a===b?0:2);
+  assert.equal(run('Object.values(loadData().activeSession.playerStats).reduce((n,p)=>n+p.losses,0)'),a===b?0:2);
+  assert.equal(run('loadData().activeSession.games[0].winnerPlayerIds.length'),a===b?0:2);
+  assert.equal(run('getLeaderboard(loadData().activeSession).reduce((n,p)=>n+p.losses,0)'),a===b?0:2);
+  assert.equal(run('completeCurrentGame()'),false);
+ }
+}
+console.log('PASS: unrestricted manual scores in both modes, ties, points/statistics persistence and duplicate protection');

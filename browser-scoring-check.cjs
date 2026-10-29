@@ -34,7 +34,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
   await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});await pause(80);
   const fit=await evaluate(`(()=>{const r=document.querySelector('.scoring-shell').getBoundingClientRect();const f=document.querySelector('.scoring-footer').getBoundingClientRect();const details=document.querySelector('.match-details');const panels=[...document.querySelectorAll('.team-panel')].map(x=>({height:x.clientHeight,scroll:x.scrollHeight}));return {w:innerWidth,h:innerHeight,scroll:document.documentElement.scrollHeight,scrollWidth:document.documentElement.scrollWidth,footer:f.bottom,panels,detailHeight:details.clientHeight,detailScroll:details.scrollHeight,hint:getComputedStyle(document.querySelector('.rotate-hint')).display};})()`);
   console.log('Viewport',width,height,JSON.stringify(fit));
-  assert.ok(fit.scroll<=height+1,'no page scroll');assert.ok(fit.scrollWidth<=width+1,'no horizontal overflow');assert.ok(fit.footer<=height+1,'footer fits');assert.ok(fit.detailScroll<=fit.detailHeight+2,'information row does not overlap controls');assert.ok(fit.panels.every(p=>p.height>=44 && p.scroll<=p.height+2),'score panels fit');
+  if(width>height)assert.ok(fit.scroll<=height+1,'no landscape page scroll');assert.ok(fit.scrollWidth<=width+1,'no horizontal overflow');if(width>height)assert.ok(fit.footer<=height+1,'footer fits');assert.ok(fit.detailScroll<=fit.detailHeight+2,'information row does not overlap controls');assert.ok(fit.panels.every(p=>p.height>=44 && p.scroll<=p.height+2),'score panels fit');
   if(width<height)assert.notEqual(fit.hint,'none');
  }
  await call('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:1,mobile:true});
@@ -63,7 +63,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  for(const [width,height] of [[568,320],[667,375],[844,390],[390,844]]) {
   await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});await pause(50);
   assert.equal(await evaluate('document.querySelector(".golden-point-indicator").hidden'),false);
-  assert.equal(await evaluate('document.documentElement.scrollHeight <= innerHeight+1 && document.documentElement.scrollWidth <= innerWidth+1'),true,'Golden Point layout fits');
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth+1 && (innerWidth < innerHeight || document.documentElement.scrollHeight <= innerHeight+1)'),true,'Golden Point layout fits');
   assert.equal(await evaluate('[...document.querySelectorAll(".team-panel")].every(p=>p.scrollHeight<=p.clientHeight+2)'),true,'Golden Point panels fit');
  }
  await call('Emulation.setDeviceMetricsOverride',{width:844,height:390,deviceScaleFactor:1,mobile:true});
@@ -95,7 +95,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  assert.equal(await evaluate('document.getElementById("setupDialog").open'),true);
  await evaluate(`document.getElementById('setupDialog').close()`);
  await until('!!navigator.serviceWorker.controller');
- const cached=await evaluate(`caches.open('pickleball-queue-v7').then(async c=>Promise.all(['./scoring.html','./scoring.css','./scoring.js','./scoring-engine.js'].map(p=>c.match(p).then(Boolean))))`);
+ const cached=await evaluate(`caches.open('${fs.readFileSync('service-worker.js','utf8').match(/CACHE_NAME = '([^']+)'/)[1]}').then(async c=>Promise.all(['./scoring.html','./scoring.css','./scoring.js','./scoring-engine.js'].map(p=>c.match(p).then(Boolean))))`);
  assert.ok(cached.every(Boolean),'all scoring assets precached');
  await call('Network.enable');await call('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
  await navigate('http://127.0.0.1:8765/scoring.html?match='+pendingId+'&offline=unvisited');
@@ -125,6 +125,6 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  await call('Page.captureScreenshot',{format:'png'}).then(r=>fs.writeFileSync('.scoring-landscape.png',Buffer.from(r.data,'base64')));
  assert.deepEqual(errors,[],'no uncaught browser errors');
  console.log('PASS: browser navigation, setup, layout sizes, portrait hint, duplicate taps, serving, undo, reload, correction, game over, once-only finalization, pending promotion, stale pages, offline query routing, legacy score resume, Back/Forward navigation, Golden Point, winning undo and simplified UI');
- await call('Browser.close');
+ if (!process.env.KEEP_BROWSER) await call('Browser.close');
  ws.close();
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -546,12 +546,12 @@ function startNewSession(queueMode = 'fair_rotation') {
     renderApp();
     showToast(`Session ${session.sessionNumber} started`, 'success');
 
-    // Hide animation after 3 seconds
+    // Keep the original welcome image brief so match controls remain easy to reach.
     setTimeout(() => {
         if (animation) {
             animation.classList.remove('show');
         }
-    }, 3000);
+    }, 650);
 
     return true;
 }
@@ -663,7 +663,7 @@ function completeCurrentGame(options = null) {
         return false;
     }
     let scoreResult;
-    if (game.scoringState) {
+    if (game.scoringState && (options?.expectedGameId || options?.expectedRevision !== undefined)) {
         try {
             ScoringEngine.validate(game.scoringState);
             if (game.scoringState.teams.A.join('|') !== game.teamA.map(p => p.id).join('|') || game.scoringState.teams.B.join('|') !== game.teamB.map(p => p.id).join('|')) throw new Error('Scoring players do not match the current game.');
@@ -679,7 +679,7 @@ function completeCurrentGame(options = null) {
             return false;
         }
     } else {
-        scoreResult = getScoreInputValues();
+        scoreResult = getScoreInputValues(game.scoringState?.target || game.targetScore || 11, game.scoringState?.endingRule || game.endingRule || 'standard');
     }
 
     if (!scoreResult.success) {
@@ -687,12 +687,35 @@ function completeCurrentGame(options = null) {
         return false;
     }
 
+    if (!options?.expectedGameId) {
+        const previous = game.scoringState;
+        const warning = previous ? '\nThis manually entered result replaces scoring state and rally history. An audit copy will be retained; serving positions will be invalidated.' : '';
+        const outcome = scoreResult.winningTeam ? `Team ${scoreResult.winningTeam} winning` : 'a tie';
+        if (!confirm(`Record ${outcome} ${scoreResult.teamAScore} - ${scoreResult.teamBScore}?${warning}`)) return false;
+        // Confirmation may leave time for another tab to score or complete the match.
+        const latest = loadData().activeSession?.currentGame;
+        if (!latest || JSON.stringify(latest) !== JSON.stringify(game)) {
+            showToast('The match changed. Review the latest scores and try again.', 'error');
+            renderApp();
+            return false;
+        }
+        if (previous) {
+            game.targetScore = previous.target;
+            game.endingRule = previous.endingRule || 'standard';
+            game.scoringAudit = [...(game.scoringAudit || []), {type:'manual_override', date:new Date().toISOString(), scoringState:previous}];
+            delete game.scoringState;
+        }
+        game.resultSource = 'manual';
+    } else {
+        game.resultSource = 'rally_scoring';
+    }
+
     game.teamAScore = scoreResult.teamAScore;
     game.teamBScore = scoreResult.teamBScore;
     game.winningTeam = scoreResult.winningTeam;
     game.losingTeam = scoreResult.losingTeam;
-    game.winnerPlayerIds = (game.winningTeam === 'A' ? game.teamA : game.teamB).map(p => p.id);
-    game.loserPlayerIds = (game.losingTeam === 'A' ? game.teamA : game.teamB).map(p => p.id);
+    game.winnerPlayerIds = (game.winningTeam === 'A' ? game.teamA : game.winningTeam === 'B' ? game.teamB : []).map(p => p.id);
+    game.loserPlayerIds = (game.losingTeam === 'A' ? game.teamA : game.losingTeam === 'B' ? game.teamB : []).map(p => p.id);
 
     const allPlayerIds = [...game.teamA, ...game.teamB].map(p => p.id);
     const teamAIds = game.teamA.map(p => p.id);
@@ -737,7 +760,7 @@ function completeCurrentGame(options = null) {
     return true;
 }
 
-function getScoreInputValues() {
+function getScoreInputValues(target = 11, endingRule = 'standard') {
     const teamAInput = document.getElementById('teamAScoreInput');
     const teamBInput = document.getElementById('teamBScoreInput');
 
@@ -752,9 +775,11 @@ function getScoreInputValues() {
         return { success: false, message: 'Enter scores for both teams before completing the game.' };
     }
 
+    if (!/^\d+$/.test(teamARaw) || !/^\d+$/.test(teamBRaw)) return {success:false, message:'Scores must be nonnegative whole numbers.'};
+
     const teamAScore = Number(teamARaw);
     const teamBScore = Number(teamBRaw);
-    const validation = validatePickleballScore(teamAScore, teamBScore);
+    const validation = validateManualScore(teamAScore, teamBScore);
 
     if (!validation.isValid) {
         return { success: false, message: validation.message };
@@ -769,8 +794,23 @@ function getScoreInputValues() {
     };
 }
 
-function validatePickleballScore(teamAScore, teamBScore, target = 11, endingRule = 'standard') {
-    if (!Number.isFinite(teamAScore) || !Number.isFinite(teamBScore) || !Number.isInteger(teamAScore) || !Number.isInteger(teamBScore)) {
+// Manual results are organizer-authoritative, independent of the live scoring rule.
+function validateManualScore(a, b) {
+    if (![a, b].every(score => Number.isSafeInteger(score) && score >= 0)) {
+        return {isValid:false, message:'Scores must be nonnegative whole numbers.'};
+    }
+    const winningTeam = a === b ? null : a > b ? 'A' : 'B';
+    return {isValid:true, message:'', winningTeam, losingTeam:winningTeam ? (winningTeam === 'A' ? 'B' : 'A') : null};
+}
+
+function validateRecordedScore(game) {
+    return game.resultSource === 'manual'
+        ? validateManualScore(game.teamAScore, game.teamBScore)
+        : validatePickleballScore(game.teamAScore, game.teamBScore, game.targetScore || game.scoringState?.target || 11, game.endingRule || game.scoringState?.endingRule || 'standard', true);
+}
+
+function validatePickleballScore(teamAScore, teamBScore, target = 11, endingRule = 'standard', historical = false) {
+    if (!Number.isFinite(teamAScore) || !Number.isFinite(teamBScore) || !Number.isSafeInteger(teamAScore) || !Number.isSafeInteger(teamBScore)) {
         return { isValid: false, message: 'Scores must be valid whole numbers.', winningTeam: null, losingTeam: null };
     }
 
@@ -793,6 +833,11 @@ function validatePickleballScore(teamAScore, teamBScore, target = 11, endingRule
     if (!['standard', 'golden_point'].includes(endingRule)) return {isValid:false, message:'Invalid game ending rule.'};
     if (lead < (endingRule === 'golden_point' ? 1 : 2)) {
         return { isValid: false, message: 'A team must win by at least 2 points.', winningTeam: null, losingTeam: null };
+    }
+
+    if (!historical && ((endingRule === 'golden_point' && winningScore !== target) ||
+        (endingRule === 'standard' && winningScore > target && lead !== 2))) {
+        return {isValid:false, message:'The game should already have ended before this score. Enter the score at the winning point.'};
     }
 
     const winningTeam = teamAScore > teamBScore ? 'A' : 'B';
@@ -832,8 +877,11 @@ function applyGameToStats(playerStats, game) {
             stat.pointDifference = stat.pointsFor - stat.pointsAgainst;
         }
 
-        if (game.status !== 'cancelled' && Number.isFinite(game.teamAScore) && Number.isFinite(game.teamBScore) && validatePickleballScore(game.teamAScore, game.teamBScore, game.targetScore || game.scoringState?.target || 11, game.endingRule || game.scoringState?.endingRule || 'standard').isValid) {
-            if (isWinner) {
+        if (game.status !== 'cancelled' && Number.isFinite(game.teamAScore) && Number.isFinite(game.teamBScore) && validateRecordedScore(game).isValid) {
+            if (game.teamAScore === game.teamBScore) {
+                stat.currentWinStreak = 0;
+                stat.currentLossStreak = 0;
+            } else if (isWinner) {
                 stat.wins++;
                 stat.currentWinStreak++;
                 stat.currentLossStreak = 0;
@@ -963,6 +1011,7 @@ function renderApp() {
     renderWaitingPlayers(data);
     renderPlayerList(data);
     renderPastSessions(data);
+    renderLeaderboardPreview(data);
 }
 
 function renderSession(data) {
@@ -1036,12 +1085,12 @@ function renderCurrentGame(data) {
                 <div class="team-card team-a">
                     <div class="team-label">Team A</div>
                     <div class="team-players">
-                        ${game.teamA.map(p => `<div class="team-player">${escapeHtml(p.name)}</div>`).join('')}
+                        ${game.teamA.map(p => `<div class="team-player" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>`).join('')}
                     </div>
-                    <label class="score-field team-score-field">
+                    <div class="score-field team-score-field">
                         <span>Team A Score</span>
-                        <input value="${game.scoringState?.scores.A ?? ''}" ${game.scoringState ? 'disabled' : ''} type="number" id="teamAScoreInput" min="0" step="1" inputmode="numeric" placeholder="0">
-                    </label>
+                        <span class="score-stepper"><button type="button" data-score-team="A" data-score-step="-1" aria-label="Decrease Team A score">&minus;</button><input value="${game.scoringState?.scores.A ?? game.teamAScore ?? ''}" type="number" id="teamAScoreInput" aria-label="Team A Score" min="0" step="1" inputmode="numeric" placeholder="0"><button type="button" data-score-team="A" data-score-step="1" aria-label="Increase Team A score">+</button></span>
+                    </div>
                 </div>
 
                 <div class="versus-indicator">VS</div>
@@ -1049,22 +1098,27 @@ function renderCurrentGame(data) {
                 <div class="team-card team-b">
                     <div class="team-label">Team B</div>
                     <div class="team-players">
-                        ${game.teamB.map(p => `<div class="team-player">${escapeHtml(p.name)}</div>`).join('')}
+                        ${game.teamB.map(p => `<div class="team-player" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>`).join('')}
                     </div>
-                    <label class="score-field team-score-field">
+                    <div class="score-field team-score-field">
                         <span>Team B Score</span>
-                        <input value="${game.scoringState?.scores.B ?? ''}" ${game.scoringState ? 'disabled' : ''} type="number" id="teamBScoreInput" min="0" step="1" inputmode="numeric" placeholder="0">
-                    </label>
+                        <span class="score-stepper"><button type="button" data-score-team="B" data-score-step="-1" aria-label="Decrease Team B score">&minus;</button><input value="${game.scoringState?.scores.B ?? game.teamBScore ?? ''}" type="number" id="teamBScoreInput" aria-label="Team B Score" min="0" step="1" inputmode="numeric" placeholder="0"><button type="button" data-score-team="B" data-score-step="1" aria-label="Increase Team B score">+</button></span>
+                    </div>
                 </div>
             </div>
 
-            <a class="btn btn-primary open-scoring-btn" href="scoring.html?match=${encodeURIComponent(game.gameId)}">Open Scoring</a>
-            <button id="completeGameBtn" class="btn btn-success" ${game.scoringState && game.scoringState.status !== 'game_over' ? 'disabled' : ''}>Complete Game</button>
-            <button id="cancelGameBtn" class="btn btn-danger" style="margin-top: 12px;">Cancel Current Game</button>
+            <a class="btn btn-primary open-scoring-btn" href="scoring.html?match=${encodeURIComponent(game.gameId)}">${uiIcon('scoring')} Open Scoring</a>
+            <button id="completeGameBtn" class="btn btn-success">${uiIcon('check')} Complete Game</button>
+            <button id="cancelGameBtn" class="btn btn-danger" >Cancel Current Game</button>
         </div>
     `;
 
-    document.getElementById('completeGameBtn').addEventListener('click', completeCurrentGame);
+    document.getElementById('completeGameBtn').addEventListener('click', () => withQueueScoringLock(() => completeCurrentGame()));
+    document.querySelectorAll('[data-score-step]').forEach(button => button.addEventListener('click', () => {
+        const input = document.getElementById(`team${button.dataset.scoreTeam}ScoreInput`);
+        const score = Number(input.value || 0);
+        if (Number.isSafeInteger(score) && score >= 0) input.value = String(Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, score + Number(button.dataset.scoreStep))));
+    }));
     document.getElementById('cancelGameBtn').addEventListener('click', cancelCurrentGame);
 }
 
@@ -1136,10 +1190,10 @@ function renderPlayerList(data) {
                                ${player.isActive ? 'checked' : ''}
                                ${isPlaying ? 'disabled' : ''}
                                data-player-id="${player.id}"
-                               class="player-toggle">
+                               class="player-toggle" aria-label="${escapeHtml(player.name)} available to play">
                         <span class="toggle-slider"></span>
                     </label>
-                    <button class="btn-remove player-remove"
+                    <button class="btn-remove player-remove" aria-label="Remove ${escapeHtml(player.name)}"
                             data-player-id="${player.id}"
                             ${isPlaying ? 'disabled' : ''}
                             >Remove</button>
@@ -1200,7 +1254,7 @@ function renderPastSessions(data) {
                         const scoreText = hasRecordedScore(game)
                             ? `Team A ${game.teamAScore} - Team B ${game.teamBScore}`
                             : 'No score recorded.';
-                        const winnerText = game.winningTeam ? `Team ${game.winningTeam}` : 'No score recorded.';
+                        const winnerText = game.winningTeam ? `Team ${game.winningTeam}` : hasRecordedScore(game) ? 'Tie' : 'No score recorded.';
 
                         return `
                             <div class="session-game-item">
@@ -1365,49 +1419,47 @@ function showToast(message, type = 'info') {
 // ==================== TAB NAVIGATION ====================
 
 function setupTabNavigation() {
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
+    const labels = {queue:'Queue', leaderboard:'Leaderboard', sessions:'Sessions', players:'Players', data:'Data & backups'};
+    const descriptions = {queue:'Your court. Your crew. The next great game.', leaderboard:'Every point counts. See how the session is shaping up.', sessions:'Good games, saved. Revisit your past sessions.', players:'The people who make the game.', data:'Keep a copy of your players, scores and session history.'};
     const toggle = document.getElementById('navigationToggle');
-    const menu = document.getElementById('dashboardMenu');
-    const currentView = document.getElementById('currentViewLabel');
-
-    function closeNavigation(returnFocus = false) {
-        menu.hidden = true;
-        toggle.setAttribute('aria-expanded', 'false');
-        if (returnFocus) toggle.focus();
-    }
-
+    const utility = document.getElementById('utilityMenu');
+    const closeMenu = () => { utility.hidden = true; toggle.setAttribute('aria-expanded', 'false'); };
     toggle.addEventListener('click', () => {
-        const opening = menu.hidden;
-        menu.hidden = !opening;
-        toggle.setAttribute('aria-expanded', String(opening));
+        utility.hidden = !utility.hidden;
+        toggle.setAttribute('aria-expanded', String(!utility.hidden));
     });
-    document.addEventListener('click', event => {
-        if (!menu.hidden && !event.target.closest('.dashboard-navigation')) closeNavigation();
-    });
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && !menu.hidden) closeNavigation(true);
-    });
-    document.addEventListener('focusin', event => {
-        if (!menu.hidden && !event.target.closest('.dashboard-navigation')) closeNavigation();
-    });
-
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabId = button.dataset.tab;
-            const wasOpen = !menu.hidden;
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                btn.removeAttribute('aria-current');
-            });
-            tabContents.forEach(content => content.classList.remove('active'));
-            button.classList.add('active');
-            button.setAttribute('aria-current', 'page');
-            document.getElementById(`${tabId}-tab`).classList.add('active');
-            currentView.textContent = button.textContent;
-            closeNavigation(wasOpen);
+    document.addEventListener('click', e => { if (!e.target.closest('.header')) closeMenu(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !utility.hidden) { closeMenu(); toggle.focus(); } });
+    function selectView() {
+        const requested = location.hash.slice(1) || 'queue';
+        const view = labels[requested] ? requested : 'queue';
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            const active = button.dataset.tab === view;
+            button.classList.toggle('active', active);
+            if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
         });
-    });
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.toggle('active', content.id === `${view}-tab`));
+        document.getElementById('currentViewLabel').textContent = labels[view];
+        document.getElementById('viewDescription').textContent = descriptions[view];
+        document.title = `${labels[view]} · Ian’s Angels`;
+        // Move existing components: same inputs, handlers, player records and IDs.
+        const destination = view === 'players' ? document.getElementById('playersWorkspace') : null;
+        (destination || document.getElementById('queueAddSlot')).appendChild(document.querySelector('.add-card'));
+        (destination || document.getElementById('queuePlayersSlot')).appendChild(document.querySelector('.players-card'));
+        closeMenu();
+    }
+    document.querySelectorAll('.tab-btn').forEach(button => button.addEventListener('click', () => {
+        const view = button.dataset.tab;
+        if (view === 'scoring') {
+            const game = loadData().activeSession?.currentGame;
+            location.assign(`scoring.html${game ? '?match=' + encodeURIComponent(game.gameId) : ''}`);
+            return;
+        }
+        if (location.hash === `#${view}`) selectView(); else location.hash = view;
+    }));
+    window.addEventListener('hashchange', selectView);
+    window.addEventListener('pageshow', selectView);
+    selectView();
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -1553,6 +1605,7 @@ function ensurePendingGame(data, force = false) {
         gameId: generateId(), gameNumber: data.settings.currentGameNumber + 1,
         teamA: result.teamA.map(p => ({id:p.id, name:p.name})),
         teamB: result.teamB.map(p => ({id:p.id, name:p.name})),
+        endingRule: session.endingRule || 'standard', targetScore: session.targetScore || 11,
         status: 'pending', dateGenerated: new Date().toISOString(),
         teamAScore: null, teamBScore: null, winnerPlayerIds: [], loserPlayerIds: []
     };
@@ -1594,7 +1647,7 @@ function getLeaderboard(session) {
     (session.games || []).forEach(game => {
         if (game.status !== 'completed') return;
         const a = normalizeScore(game.teamAScore), b = normalizeScore(game.teamBScore);
-        if (a === null || b === null || !validatePickleballScore(a, b, game.targetScore || game.scoringState?.target || 11, game.endingRule || game.scoringState?.endingRule || 'standard').isValid) return;
+        if (a === null || b === null || !validateRecordedScore(game).isValid) return;
         const ids = [...game.teamA, ...game.teamB].map(p => p.id);
         if (game.teamA.length !== 2 || game.teamB.length !== 2 || new Set(ids).size !== 4) return;
         [...game.teamA, ...game.teamB].forEach(player => {
@@ -1604,7 +1657,7 @@ function getLeaderboard(session) {
             stat.pointsFor += isTeamA ? a : b;
             stat.pointsAgainst += isTeamA ? b : a;
             stat.pointDifference = stat.pointsFor - stat.pointsAgainst;
-            stat[won ? 'wins' : 'losses']++;
+            if (a !== b) stat[won ? 'wins' : 'losses']++;
             stat.gamesPlayed++;
             stat.winPercentage = stat.wins / stat.gamesPlayed * 100;
         });
@@ -1636,7 +1689,7 @@ function renderLeaderboard(data) {
     const rankings = final ? (session.finalLeaderboard || getLeaderboard(session)) : getLeaderboard(session);
     const podium = final ? `<div class="podium">${[1,0,2].filter(i => rankings[i]).map(i => {
         const p = rankings[i];
-        return `<article class="podium-card place-${i+1}"><div class="podium-medal">${['♛','🥈','🥉'][i]}</div><h3>${escapeHtml(p.playerName)}</h3><strong>#${p.rank} · ${['1st','2nd','3rd'][i]} Place</strong><p>${p.pointsFor} points · ${p.pointDifference >= 0 ? '+' : ''}${p.pointDifference} difference</p><p>${p.wins} wins · ${p.losses} losses</p><p>${p.winPercentage.toFixed(1)}% wins</p></article>`;
+        return `<article class="podium-card place-${i+1}"><div class="podium-medal" aria-hidden="true">${['&#9819;','&#129352;','&#129353;'][i]}</div><h3>${escapeHtml(p.playerName)}</h3><strong>${['1st','2nd','3rd'][i]} Place</strong></article>`;
     }).join('')}</div>` : '';
     container.innerHTML = `<div class="leaderboard-header"><h3>${escapeHtml(session.sessionName)} · ${final ? 'Final Results' : '● Session Active'}</h3>
         <p>${formatDateTime(new Date(session.dateStarted))} · ${session.games.filter(g => g.status === 'completed').length} completed games · ${new Set(session.games.filter(g => g.status === 'completed').flatMap(g => [...g.teamA,...g.teamB].map(p=>p.id))).size} participating players</p></div>
@@ -1657,9 +1710,24 @@ function renderLeaderboard(data) {
     renderRows();
 }
 
+const UI_ICON_PATHS = {"queue": "<circle cx=\"8\" cy=\"7\" r=\"3\"/><circle cx=\"17\" cy=\"8\" r=\"2\"/><path d=\"M2 21v-3a6 6 0 0 1 12 0v3M16 14a5 5 0 0 1 6 5v2\"/>", "scoring": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"4\"/><path d=\"M12 3v18M6 8h3M15 16h3M16.5 14.5v3\"/>", "leaderboard": "<path d=\"M4 21V11h4v10M10 21V3h4v18M16 21v-7h4v7\"/>", "sessions": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"3\"/><path d=\"M7 3v4M17 3v4M3 11h18M8 15h2M14 15h2\"/>", "players": "<circle cx=\"12\" cy=\"7\" r=\"4\"/><path d=\"M4 21v-2a8 8 0 0 1 16 0v2M18 5h5M20.5 2.5v5\"/>", "data": "<path d=\"M12 3v12M7 10l5 5 5-5M4 16v5h16v-5\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "arrow": "<path d=\"M5 12h14M13 6l6 6-6 6\"/>", "court": "<rect x=\"3\" y=\"2\" width=\"18\" height=\"20\" rx=\"2\"/><path d=\"M3 12h18M3 8h18M3 16h18M12 2v6M12 16v6\"/>", "check": "<path d=\"m5 12 4 4L19 6\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>", "menu": "<path d=\"M4 6h16M4 12h16M4 18h16\"/>"};
+function uiIcon(name) { return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI_ICON_PATHS[name] || UI_ICON_PATHS.queue}</svg>`; }
+
 // Run when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { if (document.body?.dataset.page !== 'scoring') init(); });
 } else {
     if (document.body?.dataset.page !== 'scoring') init();
+}
+
+function withQueueScoringLock(callback) {
+    return navigator.locks?.request ? navigator.locks.request('pickleball-queue-scoring', callback) : callback();
+}
+
+
+function renderLeaderboardPreview(data) {
+    const container = document.getElementById('leaderboardPreview');
+    if (!container) return;
+    const rows = data.activeSession ? getLeaderboard(data.activeSession).slice(0,5) : [];
+    container.innerHTML = rows.length ? `<div class="stats-table-wrap"><table class="stats-table preview-table"><thead><tr><th>#</th><th>Player</th><th>Points</th><th>Wins</th></tr></thead><tbody>${rows.map(p => `<tr><td>${p.rank}</td><td>${escapeHtml(p.playerName)}</td><td>${p.pointsFor}</td><td>${p.wins}</td></tr>`).join('')}</tbody></table></div>` : `<div class="preview-empty">${uiIcon('leaderboard')}<strong>No games played yet</strong><p>Your leaderboard will appear here.<br>Every point is a fresh start.</p></div>`;
 }

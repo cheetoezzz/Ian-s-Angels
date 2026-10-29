@@ -15,13 +15,12 @@
 <body data-page="scoring">
     <main class="scoring-shell">
         <header class="scoring-header">
-            <div class="brand"><img src="images/ian.png" alt=""><div><strong>IAN'S ANGELS</strong><span>Pickleball Scoring</span></div></div>
-            <span id="gameBadge" class="game-badge">Current match</span>
-            <button id="landscapeBtn" type="button">⛶ Landscape</button>
-            <a href="index.html" class="back-link">← Back to Queue</a>
+            <a href="index.html#queue" class="back-link">&larr; Back to Queue</a>
+            <div class="scoring-title"><span id="gameBadge" class="game-badge">Current match</span><span class="local-connection"><i></i> Linked on this device</span></div>
+            <div class="scoring-brand"><span id="servingBadge" class="header-serving-badge" hidden></span><img src="images/ian.png" alt="Ian's Angels"><button id="landscapeBtn" type="button" aria-label="Enter fullscreen landscape">&#x26F6; <span>Landscape</span></button></div>
         </header>
-        <div class="connection-strip"><span>Linked to Queue · This device</span><span id="matchId"></span><span id="saveStatus" role="status">Saved locally</span></div>
-        <div id="rotateHint" class="rotate-hint">↻ Rotate your phone for the landscape scoreboard. All controls still work in portrait.</div>
+        <div class="connection-strip"><span>Progress saved on this device</span><span id="matchId"></span><span id="saveStatus" role="status">Saved locally</span></div>
+        <aside id="rotateHint" class="rotate-hint"><strong>&#x21BB; Rotate your phone</strong><span>Landscape gives you a full-court view. You can also play in portrait.</span></aside>
         <section id="scoringContent" class="scoring-content" aria-label="Current match scoring"></section>
         <footer class="scoring-footer" id="scoringControls" hidden>
             <button id="undoBtn" type="button">↶ Undo Last Rally</button>

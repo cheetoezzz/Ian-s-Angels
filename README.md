@@ -390,7 +390,7 @@ writes `.scoring-landscape.png`, and closes that Chrome instance. Use a dedicate
 profile with no personal browsing state. Never point this test at a regular profile.
 
 The browser suite covers desktop 1440x900, landscape 844x390, 667x375 and 568x320,
-and portrait 390x844; no page scrolling or horizontal overflow was detected. It
+and portrait 390x844. Landscape fits without page scrolling; portrait permits vertical scrolling while avoiding horizontal overflow. It
 also tests setup, duplicate-tap protection, service changes, undo, corrections,
 refresh restoration, game-over guards, once-only completion, pending promotion,
 stale match links, offline query routing, legacy resume, and Back/Forward navigation.
@@ -403,14 +403,14 @@ separately later. Court diagrams show required serving/receiving positions, not
 players' unrestricted movement during a live rally. Very long names are shortened
 visually on compact panels while full names remain in the match record and titles.
 
-Dashboard views are available from the burger Menu button. The menu shows Queue, Leaderboard, Sessions and Data vertically, marks the current view, and closes after selection, an outside click, focus leaving the menu, or Escape.
+Dashboard navigation uses five mobile bottom tabs and a desktop sidebar: Queue, Scoring, Leaderboard, Sessions and Players. Data & backups is available in the mobile header menu and desktop workspace header. Hash routes preserve browser Back/Forward behavior.
 
 
 ## Game ending rules and simplified scoring
 
 The Current Game dashboard card uses a light green background with white team cards,
 dark green headings, a primary Open Scoring button, outlined Complete Game, and a red
-cancel button. These styles apply only to Current Game.
+cancel button. The same green-and-white design system now covers the entire application.
 
 Scoring setup offers **Game Ending Rule**, separate from traditional side-out scoring:
 **Standard — Win by 2** is the default; **Sudden Death — Golden Point, Win by 1** is
@@ -433,6 +433,66 @@ The selected `endingRule` (`standard` or `golden_point`) is saved with the match
 its `scoringState`/initial configuration. Backups preserve it. Missing rules default
 to Standard, without changing old scores or session records. Finalization, statistics
 and the points leaderboard validate Golden Point results against the saved rule.
-The service worker cache is v7. Tests cover all three Golden Point targets, service
+The service worker cache is v14. Tests cover all three Golden Point targets, service
 changes, winning undo, rule locking, persistence, once-only finalization, and both
 standard and Golden Point layouts at mobile viewport sizes.
+
+
+### Direct final scores and ending rules
+
+In Current Game, enter both final scores and click Complete Game. Ending rules are configured on the landscape scoring page; Queue manual completion requires no ending-rule selector. Confirm the winner to record the result, update statistics and free the court. Start Next Game remains a separate action.
+
+Manual completion accepts any nonnegative whole-number scores in either mode, regardless of target or lead. Ties (including 0-0) record points and participation without awarding wins or losses. Live landscape scoring continues to enforce Standard and Golden Point ending rules. Targets 11, 15 and 21 are supported through scoring setup. Manual completion is independent of the selected ending rule. New matches default to Standard to 11; session data may specify `endingRule` and `targetScore` defaults.
+
+Queue and Open Scoring share the same match and persisted ending rule. Rules lock when rallies, corrections or scores exist; reset on the scoring page before changing them. Completing from Queue with scoring state asks for a manual override: the previous state is retained in `scoringAudit`, active serving state is removed, and `resultSource` is `manual`. No rallies or serving positions are invented. Backup export/import retains these fields. Previously recorded results remain included under their historical validation rules.
+
+Run `node queue.test.cjs` and `node scoring-engine.test.cjs` for automated regression checks, including both winners at all three targets, direct completion, cancellation, audit preservation and duplicate protection. Browsers with Web Locks serialize Queue changes with scoring-page writes; older browsers use the existing best-effort storage checks.
+
+
+## Responsive redesign (local review)
+
+- Mobile: compact branded header, five fixed bottom tabs with safe-area spacing, side-by-side team cards and touch-friendly score controls. On narrow cards the score controls stack so every button remains at least 44 by 44 pixels. The original logo, player placeholder and welcome image remain in use.
+- Tablet/desktop: two or three independent dashboard columns, a session summary, upcoming lineup, ordered waiting list and live top-five points preview. At 1024px the bottom tabs become a dark-green sidebar.
+- Players: a dedicated route moves the existing Add Player and All Players components into view. It does not create another player list or storage record. Queue uses those same components when returning.
+- Scoring: large rally panels flank the court and serving information. Score calls, side-out scoring, server identities, undo, correction, rule locking and once-only completion use the unchanged scoring engine. A portrait rotate prompt allows continued portrait use; the Landscape button attempts fullscreen/orientation locking when supported.
+- Leaderboard/session history: refreshed tables, search and sort controls, expandable history, and the existing gold/silver/bronze final podium. Rankings still use points, point difference, wins and the existing tie-break. The podium stays hidden during active sessions.
+- Data: existing storage keys, backup formats, match IDs and rotation algorithms are retained. No migration or storage reset is introduced by this redesign. PWA branding and the offline cache are updated.
+
+### Preview
+
+From the project folder, run:
+
+```sh
+node browser-server.cjs
+```
+
+Open `http://127.0.0.1:8765/`. Check Queue, Players, Leaderboard and Sessions using the bottom tabs/sidebar. Add four players, start a session, start a game, then try direct final scores or Open Scoring. Data & backups stays available in the header. Stop the server with Ctrl+C when finished.
+
+### Verification
+
+Dependency-free checks:
+
+```sh
+node queue.test.cjs
+node scoring-engine.test.cjs
+node --check app.js
+node --check scoring.js
+```
+
+Browser checks use a separate Chrome test profile because they populate fixture data on the preview origin. Start the server, then launch an isolated headless Chrome instance (PowerShell example):
+
+```powershell
+& 'C:\Program Files\Google\Chrome\Application\chrome.exe' --headless=new --disable-gpu --remote-debugging-port=9223 --user-data-dir="$PWD\.scoring-browser-test" --no-first-run about:blank
+```
+
+In another terminal:
+
+```powershell
+$env:KEEP_BROWSER='1'
+node browser-scoring-check.cjs
+node browser-ui-check.cjs
+```
+
+The scoring suite checks 1440x900, 844x390, 667x375, 568x320 and 390x844, including Golden Point, undo, corrections, reload, completion, offline navigation and next-game promotion. The UI suite checks widths 320, 375, 390, 430, 768, 1024, 1280, 1440 and 1920. It exercises touch target sizes, navigation history, player controls, manual results, leaderboard search, final podium, session details, backup roundtrip, and two-tab rule/score synchronization. Screenshots are saved in the ignored `.scoring-browser-test` directory.
+
+Browser verification was performed in headless Chrome. Real-device Safari/iOS and Android orientation/fullscreen behavior remains device-dependent; landscape scoring works without orientation locking. Very small portrait screens scroll vertically. All data continues to be local to the device/browser.

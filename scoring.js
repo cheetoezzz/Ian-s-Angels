@@ -26,16 +26,17 @@ function renderScoring() {
     scoringView.game = game;
     scoringView.state = game?.scoringState || null;
     $score('scoringControls').hidden = !game?.scoringState;
+    $score('servingBadge').hidden = !game?.scoringState;
     if (!game) {
         closeScoringDialogs();
         const saved = data.activeSession?.games.find(g => g.gameId === scoringView.matchId) || data.pastSessions.flatMap(s => s.games).find(g => g.gameId === scoringView.matchId);
-        content.innerHTML = `<div class="empty-match"><h2>${saved ? `Game #${saved.gameNumber} saved` : 'No active match to score'}</h2><p>${saved ? `Team ${saved.winningTeam} won · ${saved.teamAScore} - ${saved.teamBScore}. The next lineup is ready in Queue.` : 'Start a game on the Queue dashboard. This page will never create a match.'}</p><a class="back-link primary" href="index.html">${saved ? 'Ready for Next Game →' : 'Back to Queue'}</a></div>`;
+        content.innerHTML = `<div class="empty-match"><h2>${saved ? `Game #${saved.gameNumber} saved` : 'No active match to score'}</h2><p>${saved ? `${saved.winningTeam ? 'Team ' + saved.winningTeam + ' won' : 'Tie'} · ${saved.teamAScore} - ${saved.teamBScore}. The next lineup is ready in Queue.` : 'Start a game on the Queue dashboard. This page will never create a match.'}</p><a class="back-link primary" href="index.html">${saved ? 'Ready for Next Game →' : 'Back to Queue'}</a></div>`;
         $score('gameBadge').textContent = saved ? 'Match completed' : 'Court available';
         $score('matchId').textContent = '';
         return;
     }
-    $score('gameBadge').textContent = `Current Game #${game.gameNumber}`;
-    $score('matchId').textContent = `Match ID: ${game.gameId}`;
+    $score('gameBadge').textContent = `Game #${game.gameNumber} · ${game.scoringState?.status === 'game_over' ? 'Game over' : 'In progress'}`;
+    $score('matchId').textContent = `Game #${game.gameNumber}`;
     if (!game.scoringState) {
         content.innerHTML = `<div class="empty-match"><h2>Game #${game.gameNumber} · Ready to score</h2><p>${escapeHtml(game.teamA.map(p=>p.name).join(' / '))} vs ${escapeHtml(game.teamB.map(p=>p.name).join(' / '))}</p><button id="configureScoringBtn" class="primary">Confirm Starting Servers</button></div>`;
         $score('configureScoringBtn').onclick = () => openStartingSetup(game);
@@ -59,6 +60,7 @@ function renderScoring() {
     const rule = state.endingRule || 'standard';
     const ruleLocked = state.hasRecordedRally || state.history.length > 0 || state.scores.A > 0 || state.scores.B > 0;
     const over = state.status === 'game_over';
+    $score('servingBadge').textContent = over ? `Team ${state.winner} wins` : `Team ${state.servingTeam} serving`;
     content.innerHTML = `<div class="ending-rule-bar"><label>Ending rule <select id="liveEndingRule" ${ruleLocked ? 'disabled' : ''}><option value="standard">Standard — Win by 2</option><option value="golden_point">Sudden Death — Golden Point</option></select></label><strong class="golden-point-indicator" ${golden ? '' : 'hidden'} role="status">SUDDEN DEATH — NEXT POINT WINS</strong></div><div class="scoreboard ${golden ? 'golden-point-active' : ''}">${['A','B'].map(team => `<button type="button" class="team-panel ${state.servingTeam === team ? 'serving' : ''}" id="rally${team}" ${over ? 'disabled' : ''} aria-label="Team ${team} won the rally. Score ${state.scores[team]}.">
         <div><div class="team-label">TEAM ${team} ${state.servingTeam === team ? '<span class="serving-pill">SERVING</span>' : ''}</div>
         ${(team === 'A' ? game.teamA : game.teamB).map(p=>`<span title="${escapeHtml(p.name)}" class="player-line ${p.id === state.serverId ? 'current-server' : ''}">${p.id === state.serverId ? '● ' : ''}${escapeHtml(p.name)}</span>`).join('')}</div>
@@ -89,6 +91,7 @@ function courtPlayers(game,state,info) {
 }
 function openStartingSetup(game) {
     $score('endingRule').value = game.endingRule || 'standard';
+    $score('targetScore').value = String(game.targetScore || 11);
     $score('startingRightA').innerHTML = playerOptions(game.teamA);
     $score('startingRightB').innerHTML = playerOptions(game.teamB);
     $score('setupError').textContent = '';

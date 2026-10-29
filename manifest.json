@@ -1,11 +1,11 @@
 {
-  "name": "Pickleball Queue",
-  "short_name": "PickleQueue",
+  "name": "Ian’s Angels",
+  "short_name": "Ian’s Angels",
   "description": "Fair one-court player rotation for pickleball",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f5f5f5",
-  "theme_color": "#2e7d32",
+  "background_color": "#F7FAF7",
+  "theme_color": "#0F5132",
   "orientation": "any",
   "scope": "./",
   "icons": [
