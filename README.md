@@ -117,6 +117,8 @@ Load the production app once online and wait for offline setup before using it w
 
 ## GitHub Pages
 
+Both Vercel and GitHub Pages are supported. Vercel builds use `/`; GitHub Pages retains `/Ian-s-Angels`. Use `npm run build:vercel` or `npm run build:github-pages` to generate and validate the matching static output. `vercel.json` publishes `dist` with the explicit Vercel build target; GitHub Actions selects the Pages target. See [hosting configuration, production diagnosis and verification](docs/HOSTING.md).
+
 The production URL remains **https://cheetoezzz.github.io/Ian-s-Angels/**. Astro uses `site: 'https://cheetoezzz.github.io'`, `base: '/Ian-s-Angels'`, `output: 'static'` and file-format routes such as `scoring.html`. Original scoring URLs and hash bookmarks continue to work.
 
 The workflow in `.github/workflows/deploy.yml` uses Node 24, `npm ci`, type checking, regression tests, static build and the official Pages artifact/deploy actions. In GitHub Settings → Pages, select **GitHub Actions** as the source. Publish by pushing reviewed changes to `main` or manually running the workflow:

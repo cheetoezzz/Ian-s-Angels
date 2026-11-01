@@ -1,8 +1,8 @@
 import { defineConfig } from 'astro/config';
+import { resolveHosting } from './config/hosting.mjs';
 
 export default defineConfig({
-  site: 'https://cheetoezzz.github.io',
-  base: '/Ian-s-Angels',
+  ...resolveHosting(),
   output: 'static',
   build: { format: 'file' },
 });

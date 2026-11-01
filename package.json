@@ -10,9 +10,12 @@
     "dev": "astro dev --host 127.0.0.1",
     "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-ui-icons.mjs",
     "build": "astro build && node scripts/build-pwa.mjs",
+    "build:vercel": "node scripts/build-host.mjs vercel",
+    "build:github-pages": "node scripts/build-host.mjs github-pages",
     "preview": "astro preview --host 127.0.0.1",
     "check": "astro check",
     "test": "node tests/run.cjs",
+    "test:hosting": "node --test tests/hosting.test.mjs",
     "test:browser": "playwright test"
   },
   "dependencies": {
