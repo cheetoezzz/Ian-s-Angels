@@ -1,0 +1,5 @@
+---
+import Icon from '../ui/Icon.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+        <nav id="dashboardMenu" class="dashboard-menu" aria-label="Main navigation"><a class="tab-btn active" href={base + 'index.html'} data-tab="queue" aria-current="page"><Icon name="queue" /><span>Queue</span></a><a class="tab-btn " href={base + 'scoring.html'} data-tab="scoring" ><Icon name="scoring" /><span>Scoring</span></a><a class="tab-btn " href={base + 'leaderboard.html'} data-tab="leaderboard" ><Icon name="leaderboard" /><span>Leaderboard</span></a><a class="tab-btn " href={base + 'sessions.html'} data-tab="sessions" ><Icon name="sessions" /><span>Sessions</span></a><a class="tab-btn " href={base + 'players.html'} data-tab="players" ><Icon name="players" /><span>Players</span></a></nav>

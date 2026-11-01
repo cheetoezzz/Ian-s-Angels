@@ -1,0 +1,16 @@
+---
+import Icon from '../ui/Icon.astro';
+---
+<section id="participationCard" class="section participation-card">
+  <h2><Icon name="players" />Attendance</h2>
+  <div id="attendanceSummary"></div>
+  <div class="participation-actions">
+    <button id="manageCheckInBtn" class="btn btn-secondary" type="button">Manage Check-In</button>
+    <button id="manageFixedPartnersMobileBtn" class="btn btn-secondary mobile-pairs-action" type="button">Fixed Partners</button>
+  </div>
+  <dialog id="participationDialog" aria-labelledby="participationTitle">
+    <div class="participation-dialog-header"><div><h2 id="participationTitle">Check-in &amp; fixed partners</h2><p>Attendance applies to this session only.</p></div><button id="closeParticipationBtn" type="button" class="btn btn-secondary" aria-label="Close attendance manager">Close</button></div>
+    <div id="attendanceManager"></div>
+    <section class="pair-manager" aria-labelledby="pairManagerTitle"><h3 id="pairManagerTitle">Fixed Partners</h3><p>Optional teammates in the same fair queue. Both players must be checked in to create a pair.</p><div id="fixedPairManager"></div></section>
+  </dialog>
+</section>

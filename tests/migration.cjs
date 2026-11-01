@@ -1,0 +1,26 @@
+const assert = require('node:assert/strict');
+module.exports = (app, engine) => {
+  const players=Array.from({length:4},(_,i)=>({id:'legacy-'+i,name:'Player '+i,isActive:true,gamesPlayed:1,lastPlayedGameNumber:1,waitingSinceGameNumber:2,partnerHistory:['legacy-'+(i^1)],opponentHistory:[]}));
+  const completed={gameId:'historical-game',gameNumber:1,status:'completed',dateGenerated:'2025-01-01T12:00:00.000Z',dateCompleted:'2025-01-01T13:00:00.000Z',teamA:players.slice(0,2),teamB:players.slice(2),teamAScore:11,teamBScore:8};
+  const current={...completed,gameId:'legacy-active',gameNumber:2,status:'current',teamAScore:4,teamBScore:3};
+  const fixture={players,settings:{currentGameNumber:2},currentGame:current,pastGames:[completed]};
+  const migrated=app.migrateData(structuredClone(fixture));
+  assert.deepEqual(app.migrateData(structuredClone(migrated)),migrated,'actual migration is idempotent');
+  assert.deepEqual(migrated.players,players,'IDs and all fairness history survive migration');
+  assert.equal(migrated.activeSession.currentGame.gameId,'legacy-active');
+  assert.equal(migrated.activeSession.currentGame.status,'in_progress');
+  assert.equal(migrated.activeSession.currentGame.teamAScore,4);
+  assert.equal(migrated.activeSession.currentGame.endingRule,'standard');
+  assert.equal(migrated.pastSessions[0].games[0].gameId,'historical-game');
+  assert.equal(migrated.pastSessions[0].finalLeaderboard.length,4);
+  const active=migrated.activeSession.currentGame;
+  active.scoringState=engine.rally(engine.create(active,{firstServingTeam:'A',startingRight:{A:players[1].id,B:players[3].id},target:15,endingRule:'golden_point'}),'A');
+  active.teamAScore=1; active.teamBScore=0; active.endingRule='golden_point';
+  migrated.activeSession.pendingGame={...current,gameId:'stable-pending',status:'pending',teamAScore:null,teamBScore:null};
+  const modern=app.migrateData(structuredClone(migrated));
+  assert.deepEqual(modern.activeSession.currentGame.scoringState,active.scoringState,'server, courts, history and revision survive import');
+  assert.equal(modern.activeSession.pendingGame.gameId,'stable-pending');
+  assert.deepEqual(app.migrateData(structuredClone(modern)),modern,'modern backup normalization is idempotent');
+  assert.deepEqual(JSON.parse(JSON.stringify(modern)),modern,'JSON backup preserves all migrated state');
+  console.log('PASS: actual legacy/modern migrations are idempotent; IDs, history, pending lineup, scores, rules, courts and rally audit survive');
+};

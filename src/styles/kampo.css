@@ -1,0 +1,68 @@
+/* KAMPO theme. Structural classes retain the original renderer's DOM contract. */
+:root {
+  --color-primary:#b20d17; --color-primary-dark:#82070d; --color-primary-hover:#ce1822;
+  --color-black:#111; --color-charcoal:#1c1c1c; --color-dark-surface:#292929;
+  --color-gold:#f5c84b; --color-gold-dark:#d9a92f; --color-white:#fff;
+  --color-background:#f7f7f7; --color-surface:#fff; --color-border:#e5e5e5;
+  --color-text:#181818; --color-text-muted:#6b7280; --color-success:#16834a; --color-danger:#b91c1c;
+  --primary:var(--color-primary); --primary-dark:var(--color-primary-dark); --primary-soft:#fff1f2;
+  --text:var(--color-text); --muted:var(--color-text-muted); --border:var(--color-border);
+  --surface-soft:#f4f4f4; --background:var(--color-background); --gold:var(--color-gold);
+  --shadow-sm:0 2px 8px #0000000a; --shadow-md:0 5px 18px #0000000d;
+  accent-color:var(--primary);
+}
+body { background:#f7f7f7; color:#181818; }
+.header { background:linear-gradient(132deg,#380304 0%,#82070d 58%,#b20d17 58.2%,#950710 72%,#1c1c1c 72.2%); border-bottom:3px solid var(--gold); box-shadow:0 3px 12px #0002; }
+.kampo-brand { display:inline-flex; flex-direction:column; align-items:center; color:inherit; flex-shrink:0; line-height:1; white-space:nowrap; }
+.kampo-brand strong { font-size:30px; font-weight:950; letter-spacing:-1.4px; font-style:italic; }
+.kampo-brand > span { font-size:7px; font-weight:750; letter-spacing:2px; margin-top:6px; }
+.kampo-brand { flex-direction:row; gap:8px; }.brand-stacked { display:none; }.brand-emblem { width:34px; height:38px; object-fit:contain; }.brand-wordmark { width:118px; height:28px; overflow:hidden; }
+.header-brand { color:white; gap:18px; }.header h1 { color:white; font-size:17px; }.header .subtitle { color:#ffffffb3; font-size:10px; }.header-menu { color:#fff; border-color:#ffffff30; background:#ffffff0d; border-radius:10px; }
+.header-copy { padding-left:16px; border-left:1px solid #ffffff40; }
+.dashboard-menu { background:#111; border-top:1px solid #333; box-shadow:0 -3px 14px #0002; }
+.dashboard-menu .tab-btn { text-decoration:none; color:#d1d1d1; border-radius:12px; }
+.dashboard-menu .tab-btn.active { background:linear-gradient(#ffe38a,#f5c84b); color:#17130b; box-shadow:0 2px 6px #0002; }
+.dashboard-menu .tab-btn:hover { color:var(--gold); }.dashboard-menu .tab-btn.active:hover { color:#111; }
+.section { border:1px solid #e5e5e5; border-radius:15px; background:linear-gradient(145deg,#fff,#fcfcfc); box-shadow:0 3px 12px #00000009; }
+.section h2 { color:#151515; font-weight:800; }.section h2 > .icon { color:var(--primary); }
+.eyebrow { color:var(--primary); letter-spacing:1.8px; }.workspace-heading h2 { color:#151515; font-weight:850; letter-spacing:-1px; }
+.workspace-tools { color:#333; }.workspace-tools:hover { border-color:var(--gold); }
+.btn { border-radius:9px; font-weight:750; }.btn-primary { background:linear-gradient(#ffe28a,#f5c84b); border:1px solid #e4bb49; color:#211800; box-shadow:0 2px 4px #a8791120; }.btn-primary:hover:not(:disabled) { background:#f4c13a; }
+.btn-secondary { color:#242424; background:#fff; border:1px solid #d4d4d4; }.btn-secondary:hover:not(:disabled) { background:#f4f4f4; }
+.btn-danger { background:linear-gradient(#c71c28,#a00710); border:1px solid #9c0a14; color:white; }.btn-danger:hover:not(:disabled) { background:#940811; }
+.btn-success { background:#fff; color:#171717; border:1px solid #252525; }.btn-success:hover:not(:disabled) { background:#f4f4f4; }
+.btn-warning { background:#fff5d6; color:#6b4a00; border-color:#e8cb76; }
+.open-scoring-btn,#liveLeaderboardBtn { background:linear-gradient(#292929,#111); color:#ffe078; border:1px solid #d4ad37; }
+.open-scoring-btn:hover:not(:disabled),#liveLeaderboardBtn:hover:not(:disabled) { background:#333; }
+.session-card { background:#f8f8f8; border-color:#e5e5e5; border-radius:11px; }.session-name { color:#111; }.queue-mode-badge { background:#ffe58e; color:#604600; border-color:#f4d777; }
+.session-header::after { content:'● Active'; align-self:flex-start; color:#654800; background:#ffe18a; border:1px solid #efcf6b; border-radius:20px; padding:4px 8px; font-size:10px; font-weight:750; white-space:nowrap; }
+.current-card { background:#fff; border-color:#dedede; }.game-number { color:#6c6c6c; }.team-card { background:linear-gradient(#fafafa,#f6f6f6); border-color:#e5e5e5; border-radius:11px; }.team-label { color:#a80813; border-left:3px solid #b20d17; padding-left:6px; }
+.team-player { background:#ededed; color:#222; padding:8px; border-radius:6px; }.team-score-field > span:first-child { color:#666; }.team-score-field input { background:#fff; color:#111; border-color:#d4d4d4; border-radius:6px; }
+.score-stepper button { color:#82070d; background:#fff; border-color:#dedede; border-radius:6px; }.versus-indicator { background:#a00913; color:white; border:2px solid #edcb64; }
+.game-card { background:none; border-color:#e5e5e5; }.empty-state-kicker { color:#82070d; }.preview-empty { color:#707070; background:#fafafa; }.preview-empty .icon { color:#b20d17; }
+.stats-table th { color:#555; background:#f7f7f7; }.stats-table td { border-color:#eee; }.preview-table tbody tr:first-child { background:#fff0be; }.preview-table tbody tr:first-child td:first-child { border-radius:7px 0 0 7px; }.preview-table tbody tr:first-child td:last-child { border-radius:0 7px 7px 0; }
+.player-row,.player-item,.waiting-player { border-color:#eee; }.waiting-player { background:#f8f8f8; }.player-avatar { background:#fff2d1; color:#82070d; }.player-name { color:#181818; }
+.upcoming-lineup,.upcoming-card { background:#fafafa; border-color:#e5e5e5; }.readiness-status { background:#eaf5eb; color:#17622d; }
+.podium-card.place-1 { background:linear-gradient(#fff6d3,#ffe18a); border-color:#dbb143; }.podium-card.place-2 { background:#f0f1f3; border-color:#c5c8ce; }.podium-card.place-3 { background:#f6e7db; border-color:#cd9c77; }
+.modal-overlay { background:#100406ad; }.mode-option:has(input:checked) { background:#fff5e1; border-color:#ddb547; }.toast { background:#222; }.toast.success { background:#145c32; }.session-animation { background:#180508dc; }
+.queue-rule { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:7px; margin:12px 0; font-size:11px; font-weight:750; }.queue-rule select { min-height:44px; max-width:100%; background:#fff1c2; border:1px solid #e5c35f; color:#382600; border-radius:8px; padding:6px; font:inherit; }
+.session-info dl { display:grid; grid-template-columns:auto 1fr; gap:12px; font-size:12px; }.session-info dt { color:#777; }.session-info dd { margin:0; font-weight:650; overflow-wrap:anywhere; }
+input:focus,select:focus { border-color:#bf891e; outline-color:#bf891e; }:focus-visible { outline:3px solid #ba8b17; outline-offset:3px; }
+@media (max-width:374px) { .header-copy { display:none; }.header .kampo-brand strong { font-size:29px; } }
+@media (min-width:1024px) {
+ .header { background:linear-gradient(155deg,#1d1d1d,#0c0c0c); border:0; width:200px; padding:30px 18px; }
+ .header-brand { flex-direction:column; align-items:flex-start; gap:22px; }.header .kampo-brand { padding:0 12px; }.header .brand-stacked { display:block; width:128px; height:auto; }.header .brand-emblem,.header .brand-wordmark { display:none; }.header-copy { padding:15px 0 0; border:0; border-top:1px solid #ffffff24; }.header h1 { font-size:16px; }
+ .app { padding-left:200px; }.brand-motto { color:#fff; font-style:italic; font-size:30px; line-height:1.1; }.brand-motto span { color:#a6a6a6; font-style:normal; line-height:1.6; }
+ .dashboard-menu { left:10px; width:180px; top:225px; background:none; box-shadow:none; }.dashboard-menu .tab-btn { color:#c8c8c8; border-radius:8px; }.dashboard-menu .tab-btn.active { background:linear-gradient(135deg,#c11620,#8b0610); color:white; box-shadow:inset 3px 0 #f5c84b; }.dashboard-menu .tab-btn:hover { background:#ffffff0c; }
+ .workspace-heading { position:relative; padding:24px; margin:-30px -22px 24px; color:white; background:linear-gradient(126deg,#191919,#65030a 55%,#9d0712 85%,#e9be44 85.2%,#e9be44 86%,#1c1c1c 86.2%); }.workspace-heading h2 { color:white; }.workspace-heading .eyebrow { color:#f5d57f; }#viewDescription { color:#d2c2c2; }.workspace-tools { color:white; background:#ffffff10; border-color:#ffffff35; }
+ .session-card-section>h2 { display:flex; }.session-card-section { padding:18px; }.session-card { display:block; background:#f8f8f8; padding:12px; border:1px solid #eee; }.session-actions { margin-top:12px; }.session-header { align-items:flex-start; gap:7px; flex-wrap:wrap; }.session-header::after { margin-left:auto; }
+ #queue-tab.active { grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:none; }
+ .queue-primary { display:contents; }#queueAddSlot { grid-column:1; grid-row:1; }.session-card-section { grid-column:1; grid-row:2; }.current-card { grid-column:1; grid-row:3; }.queue-secondary { grid-column:2; grid-row:1/4; }.queue-tertiary { grid-column:1/-1; grid-row:4; }
+}
+@media (min-width:1280px) {
+ main { padding:30px; }.workspace-heading { margin:-30px -30px 24px; padding:25px 30px; }
+ #queue-tab.active { grid-template-columns:minmax(300px,1.15fr) minmax(230px,.9fr) minmax(250px,1fr); grid-template-areas:none; }
+ .queue-primary { display:contents; }#queueAddSlot { grid-column:1; grid-row:1; }.session-card-section { grid-column:1; grid-row:2; }.current-card { grid-column:1; grid-row:3; }.queue-secondary { grid-column:2; grid-row:1/5; }.queue-tertiary { grid-column:3; grid-row:1/5; }.preview-empty { min-height:180px; }
+ .queue-primary .section { padding:18px; }.team-player { padding:8px; font-size:13px; }.team-card { padding:10px; }
+}
+@media (min-width:1600px) { .header { width:220px; }.app { padding-left:220px; }.dashboard-menu { width:200px; }main { padding:30px 36px; }.workspace-heading { margin:-30px -36px 26px; padding-inline:36px; }#queue-tab.active { gap:20px; }.team-player { padding:10px; } }

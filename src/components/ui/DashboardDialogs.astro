@@ -1,0 +1,42 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+        <!-- Toast Notification -->
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+        <!-- Queue Mode Modal -->
+        <div id="queueModeModal" class="modal-overlay" aria-hidden="true">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="queueModeModalTitle">
+                <div class="modal-header">
+                    <h2 id="queueModeModalTitle">Choose Queue Mode</h2>
+                    <button id="closeQueueModeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="mode-picker modal-mode-picker" role="radiogroup" aria-label="Queue mode">
+                        <label class="mode-option">
+                            <input type="radio" name="modalQueueMode" value="fair_rotation" checked>
+                            <span class="mode-option-content">
+                                <span class="mode-option-title">Smart Fair Rotation</span>
+                                <span class="mode-option-description">Balances eligible waiting time and mixes teammates and opponents. Players start as Not Arrived until checked in.</span>
+                            </span>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="modalQueueMode" value="winner_priority">
+                            <span class="mode-option-content">
+                                <span class="mode-option-title">Winner Priority</span>
+                                <span class="mode-option-description">Uses the same smart queue, with a small winner preference among equally fair options.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelQueueModeModalBtn" class="btn btn-secondary" type="button">Cancel</button>
+                    <button id="confirmQueueModeBtn" class="btn btn-primary" type="button">Start Session</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Session Animation -->
+        <div id="sessionAnimation" class="session-animation" aria-hidden="true">
+            <img src={base + "images/kampo-emblem-white.svg"} alt="KAMPO" class="session-animation-logo">
+        </div>

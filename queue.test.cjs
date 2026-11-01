@@ -40,7 +40,8 @@ assert.equal(run('loadData().pastSessions[0].finalLeaderboard.length'),4);
 run(`d=fixture(4); saveData(d); generateNextGame();`);
 assert.equal(run('loadData().activeSession.pendingGame.teamA.concat(loadData().activeSession.pendingGame.teamB).length'),4,'four player reuse');
 run(`d=loadData(); d.players[0].isActive=false; ensurePendingGame(d); saveData(d);`);
-assert.equal(run('loadData().activeSession.pendingGame'),null,'invalidate inactive lineup');
+assert.equal(run('isPendingValid(loadData())'),false,'inactive lineup is marked invalid and preserved for explicit regeneration');
+assert.ok(run('loadData().activeSession.pendingInvalidReason'));
 run(`d=fixture(3); saveData(d);`);
 assert.equal(run('generateNextGame()'),false);
 assert.equal(run('validatePickleballScore(11,11).isValid'),false);
@@ -66,7 +67,9 @@ run(`d=fixture(8); d.activeSession.queueMode='winner_priority'; saveData(d); gen
 assert.equal(run('isPendingValid(loadData())'),true,'winner priority pending');
 assert.equal(run('loadData().players.reduce((n,p)=>n+p.gamesPlayed,0)'),0);
 run(`d=loadData(); const unavailable=d.activeSession.pendingGame.teamA[0].id; d.players.find(p=>p.id===unavailable).isAvailable=false; ensurePendingGame(d); saveData(d);`);
-assert.equal(run('isPendingValid(loadData())'),true,'regenerate unavailable player');
+assert.equal(run('isPendingValid(loadData())'),false,'unavailable player requires explicit regeneration');
+run('d=loadData(); ensurePendingGame(d,true); saveData(d);');
+assert.equal(run('isPendingValid(loadData())'),true,'explicit regeneration selects an available lineup');
 console.log('PASS: active/final podium rendering, disabled start, empty session, winner priority and unavailable player regeneration');
 run(`
 const scoredMatch=(teamA,teamB,a,b)=>({status:'completed',teamA:teamA.map(id=>({id,name:id})),teamB:teamB.map(id=>({id,name:id})),teamAScore:a,teamBScore:b});
@@ -94,11 +97,11 @@ for (const mode of ['fair_rotation', 'winner_priority']) {
 run(`d=fixture(4); d.players[0].partnerHistory=['p1']; d.players[1].partnerHistory=['p0']; d.players[2].partnerHistory=['p3']; d.players[3].partnerHistory=['p2']; saveData(d); generateNextGame();`);
 assert.equal(run(`(()=>{const d=loadData(); return [d.activeSession.currentGame.teamA,d.activeSession.currentGame.teamB].every(t=>!repeatsLastPartner(d.players.find(p=>p.id===t[0].id),d.players.find(p=>p.id===t[1].id),null));})()`),true,'previous session partner history honored');
 run(`d=fixture(4); d.players[1].partnerHistory=['p0']; d.players[2].partnerHistory=['p0']; d.players[3].partnerHistory=['p0']; saveData(d);`);
-assert.equal(run('generateNextGame()'),false,'impossible partner constraint blocks game');
-assert.equal(run('loadData().activeSession.currentGame'),null);
+assert.equal(run('generateNextGame()'),true,'soft partner variety permits play when repetition is unavoidable');
+assert.ok(run('loadData().activeSession.currentGame'));
 run(`d=fixture(4); d.players[0].partnerHistory=['p1']; d.players[1].partnerHistory=['p0']; d.activeSession.pendingGame={gameId:'old',status:'pending',teamA:[d.players[0],d.players[1]],teamB:[d.players[2],d.players[3]]};`);
-assert.equal(run('isPendingValid(d)'),false,'old repeating preview invalidated');
-console.log('PASS: both modes change partners across 12 matches, ongoing-match previews, cross-session history, impossible pairing guard, legacy preview invalidation');
+assert.equal(run('isPendingValid(d)'),true,'a saved lineup is not invalidated solely for soft teammate repetition');
+console.log('PASS: both modes change partners across 12 matches, ongoing-match previews, cross-session history, soft repetition fallback and saved-lineup protection');
 ctx.ScoringEngine = require('./scoring-engine.js');
 run(`d=fixture(4); saveData(d); generateNextGame(); d=loadData(); let match=d.activeSession.currentGame; let scoring=ScoringEngine.create(match,{firstServingTeam:'A',startingRight:{A:match.teamA[1].id,B:match.teamB[1].id},target:15}); scoring=ScoringEngine.correct(scoring,{scores:{A:14,B:13},positions:ScoringEngine.positionsFor(scoring.teams,scoring.initialConfig.startingRight,{A:14,B:13}),servingTeam:'A',serverId:match.teamA[1].id,serverNumber:1}); match.scoringState=scoring; saveData(d);`);
 assert.equal(run('completeCurrentGame({expectedGameId:loadData().activeSession?.currentGame?.gameId})'),false,'configured 15-point game cannot finish at 14');

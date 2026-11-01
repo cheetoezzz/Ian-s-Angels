@@ -1,0 +1,31 @@
+---
+import Icon from '../ui/Icon.astro';
+import WaitingPlayers from './WaitingPlayers.astro';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<section class="section players-card roster-card" aria-label="Players and waiting queue">
+  <div class="roster-toolbar">
+    <div class="roster-tabs" role="tablist" aria-label="Player list">
+      <button id="rosterPlayersTab" type="button" role="tab" aria-selected="true" aria-controls="playerRosterPanel"><Icon name="players" /><span>Players</span><span id="rosterPlayerCount">(0)</span></button>
+      <button id="rosterWaitingTab" type="button" role="tab" aria-selected="false" aria-controls="waitingRosterPanel" tabindex="-1"><Icon name="clock" /><span>Waiting Next</span><span id="rosterWaitingCount">(0)</span></button>
+    </div>
+    <label class="roster-search"><span class="sr-only">Search players</span><input id="rosterSearch" type="search" placeholder="Search player…" autocomplete="off" /></label>
+    <button id="rosterAddPlayerBtn" class="btn btn-secondary" type="button"><Icon name="plus" /><span>Add Player</span></button>
+  </div>
+  <div id="playerRosterPanel" role="tabpanel" aria-labelledby="rosterPlayersTab">
+    <div id="rosterFilters" class="roster-filters" role="group" aria-label="Filter players by attendance"></div>
+    <div id="rosterScroll" class="roster-scroll" tabindex="0" role="region" aria-label="Registered players">
+      <table class="roster-table">
+        <caption class="sr-only">Registered players, attendance, games played, fixed partners and player actions</caption>
+        <colgroup><col class="col-number" /><col class="col-name" /><col class="col-status" /><col class="col-games" /><col class="col-partner" /><col class="col-actions" /></colgroup>
+        <thead><tr><th scope="col">#</th><th scope="col">Player</th><th scope="col">Status</th><th scope="col">Games</th><th scope="col">Partner</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody id="playerListSection"></tbody>
+      </table>
+    </div>
+    <div class="roster-panel-footer"><span id="rosterResults" role="status"></span><a id="viewAllPlayers" href={base + 'players.html'}>View All Players <Icon name="arrow" /></a></div>
+  </div>
+  <div id="waitingRosterPanel" role="tabpanel" aria-labelledby="rosterWaitingTab" hidden>
+    <WaitingPlayers />
+    <div class="roster-panel-footer"><span id="waitingResults" role="status"></span><button id="viewFullQueue" class="roster-text-button" type="button">View Full Queue</button></div>
+  </div>
+</section>

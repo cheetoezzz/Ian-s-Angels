@@ -1,2 +1,8 @@
 ﻿.scoring-browser-test/
 .scoring-landscape.png
+node_modules/
+dist/
+.astro/
+*.tsbuildinfo
+test-results/
+playwright-report/

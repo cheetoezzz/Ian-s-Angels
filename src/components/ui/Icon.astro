@@ -1,0 +1,6 @@
+---
+import { iconHref, type IconName } from '../../lib/icons';
+interface Props { name: IconName; }
+const { name } = Astro.props;
+---
+<svg class="icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><use href={iconHref(name)} /></svg>

@@ -1,0 +1,11 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import ScoringShell from '../components/scoring/ScoringShell.astro';
+import '../styles/scoring.css';
+import '../styles/kampo-scoring.css';
+import '../styles/feedback.css';
+---
+<BaseLayout title="Match Scoring" page="scoring">
+  <ScoringShell />
+  <script src="../scripts/scoring.ts"></script>
+</BaseLayout>

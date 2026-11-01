@@ -1,0 +1,28 @@
+{
+  "name": "kampo-pickle-ball",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "prebuild": "node scripts/prepare-icons.mjs && node scripts/prepare-ui-icons.mjs",
+    "build": "astro build && node scripts/build-pwa.mjs",
+    "preview": "astro preview --host 127.0.0.1",
+    "check": "astro check",
+    "test": "node tests/run.cjs",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "astro": "7.4.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@playwright/test": "^1.64.1",
+    "bootstrap-icons": "^1.13.2",
+    "sharp": "^0.35.5",
+    "typescript": "~5.9.3"
+  }
+}

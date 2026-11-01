@@ -1,0 +1,29 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/layout/Header.astro';
+import Navigation from '../components/layout/Navigation.astro';
+import PageHeader from '../components/layout/PageHeader.astro';
+import QueueDashboard from '../components/dashboard/QueueDashboard.astro';
+import SecondaryViews from '../components/dashboard/SecondaryViews.astro';
+import DashboardDialogs from '../components/ui/DashboardDialogs.astro';
+import '../styles/global.css';
+import '../styles/kampo.css';
+import '../styles/feedback.css';
+import '../styles/participation.css';
+import '../styles/dashboard.css';
+const { view = 'queue', title = 'Queue' } = Astro.props;
+---
+<BaseLayout title={title} view={view}>
+  <a class="skip-link" href="#mainContent">Skip to content</a>
+  <div class="app">
+    <Header />
+    <Navigation />
+    <main id="mainContent" tabindex="-1">
+      <PageHeader />
+      <QueueDashboard />
+      <SecondaryViews />
+    </main>
+    <DashboardDialogs />
+  </div>
+  <script src="../scripts/dashboard.ts"></script>
+</BaseLayout>

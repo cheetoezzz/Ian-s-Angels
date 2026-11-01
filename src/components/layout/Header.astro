@@ -1,0 +1,13 @@
+---
+import Brand from './Brand.astro';
+import Icon from '../ui/Icon.astro';
+---
+        <header class="header">
+            <a href="#queue" class="header-brand" aria-label="KAMPO Queue">
+                <Brand />
+                <div class="header-copy"><h1>KAMPO</h1><p class="subtitle">Fair one-court player rotation</p></div>
+            </a>
+            <button id="navigationToggle" class="header-menu" type="button" aria-label="Open data tools" aria-expanded="false" aria-controls="utilityMenu"><Icon name="menu" /></button>
+            <div id="utilityMenu" class="utility-menu" hidden><button class="tab-btn" type="button" data-tab="data"><Icon name="data" /><span>Data &amp; backups</span></button></div>
+            <p class="brand-motto">PLAY.<br>ROTATE.<br>REPEAT.<span>Pickleball for everyone.</span></p>
+        </header>

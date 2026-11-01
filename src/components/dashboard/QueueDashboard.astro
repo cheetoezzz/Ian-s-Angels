@@ -1,0 +1,28 @@
+---
+import ActiveSession from './ActiveSession.astro';
+import AddPlayer from './AddPlayer.astro';
+import CurrentGame from './CurrentGame.astro';
+import ReadyNextGame from './ReadyNextGame.astro';
+import LeaderboardPreview from './LeaderboardPreview.astro';
+import PlayerList from './PlayerList.astro';
+import SessionInfo from './SessionInfo.astro';
+import Participation from './Participation.astro';
+import FixedPartners from './FixedPartners.astro';
+---
+<div class="tab-content active" id="queue-tab">
+  <div class="dashboard-overview">
+    <ActiveSession />
+    <div id="queueParticipationSlot"><Participation /></div>
+    <div id="queueFixedPartnersSlot"><FixedPartners /></div>
+    <SessionInfo />
+  </div>
+  <div class="dashboard-matches">
+    <CurrentGame />
+    <ReadyNextGame />
+    <div id="queuePlayersSlot"><PlayerList /></div>
+  </div>
+  <div class="dashboard-footer">
+    <div id="queueAddSlot"><AddPlayer /></div>
+    <details class="dashboard-leaderboard"><summary>Live Leaderboard</summary><LeaderboardPreview /></details>
+  </div>
+</div>

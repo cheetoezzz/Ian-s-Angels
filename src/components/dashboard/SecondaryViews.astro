@@ -1,0 +1,43 @@
+---
+import Icon from '../ui/Icon.astro';
+---
+            <div class="tab-content" id="leaderboard-tab"><section class="section"><div id="leaderboardSection"></div></section><p class="device-note">Saved on this device &middot; Rankings are not synchronized across phones.</p></div>
+            <div class="tab-content" id="sessions-tab"><section class="section "><h2><Icon name="sessions" />Session History</h2><div id="pastSessionsSection"></div></section></div>
+            <div class="tab-content" id="players-tab"><div id="playersWorkspace"></div></div>
+                    <!-- Data Tab -->
+        <div class="tab-content" id="data-tab">
+            <section class="section">
+                <h2>Data Tools</h2>
+                <div class="data-tools">
+                    <div class="data-tool-card">
+                        <div>
+                            <h3>Export Backup</h3>
+                            <p>Download a JSON copy of players, sessions, scores, and history.</p>
+                        </div>
+                        <button id="exportJsonBtn" class="btn btn-secondary">Export JSON Backup</button>
+                    </div>
+                    <div class="data-tool-card">
+                        <div>
+                            <h3>Import Backup</h3>
+                            <p>Restore the app from a previously exported JSON backup.</p>
+                        </div>
+                        <input type="file" id="importJsonInput" accept=".json" style="display: none;">
+                        <button id="importJsonBtn" class="btn btn-secondary">Import JSON Backup</button>
+                    </div>
+                    <div class="data-tool-card">
+                        <div>
+                            <h3>Clear Past Sessions</h3>
+                            <p>Remove completed session history while keeping current players.</p>
+                        </div>
+                        <button id="clearPastSessionsBtn" class="btn btn-warning">Clear Past Sessions</button>
+                    </div>
+                    <div class="data-tool-card danger-card">
+                        <div>
+                            <h3>Reset All Data</h3>
+                            <p>Delete all players, sessions, settings, scores, and history.</p>
+                        </div>
+                        <button id="resetAllDataBtn" class="btn btn-danger">Reset All Data</button>
+                    </div>
+                </div>
+            </section>
+        </div>
